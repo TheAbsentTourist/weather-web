@@ -4,18 +4,21 @@
  * Organization: SOURCE_REGISTRY drives tool schemas + handlers (not a flat TOOLS array).
  * Core sources work without keys. Optional sources gated by WEATHER_OPTIONAL=1 or WEATHER_ENABLE_*.
  * FIRMS always registered; missing FIRMS_MAP_KEY → clear config error (never invent a key).
+ * Credentials: process.env, then $PLUGIN_DATA/config.json.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 
 const PROTOCOL_VERSION = "2024-11-05";
-const SERVER_INFO = { name: "weather-hazards", version: "0.1.5" };
+const SERVER_INFO = { name: "weather-hazards", version: "0.1.6" };
 const TIMEOUT_MS = 25_000;
-const UA = "WeatherHazardsPlugin/0.1.5 (contact: chucktastictime@gmail.com)";
+const UA = "WeatherHazardsPlugin/0.1.6 (contact: chucktastictime@gmail.com)";
 const NWS_UA = UA;
 /** CloudFront on metoc.navy.mil often 403s the generic plugin UA — JTWC fetches use a browser-like UA. */
 const JTWC_UA =
-  "Mozilla/5.0 (compatible; WeatherHazardsPlugin/0.1.5; +https://github.com/TheAbsentTourist/weather-web)";
+  "Mozilla/5.0 (compatible; WeatherHazardsPlugin/0.1.6; +https://github.com/TheAbsentTourist/weather-web)";
 const JTWC_RSS = "https://www.metoc.navy.mil/jtwc/rss/jtwc.rss";
 const JTWC_ABPW = "https://www.metoc.navy.mil/jtwc/products/abpwweb.txt";
 const JTWC_ABIO = "https://www.metoc.navy.mil/jtwc/products/abioweb.txt";
@@ -91,8 +94,26 @@ function isoFromMs(ms) {
   return new Date(Number(ms)).toISOString();
 }
 
+function loadFileConfig() {
+  const dir = process.env.PLUGIN_DATA;
+  if (!dir) return {};
+  try {
+    const parsed = JSON.parse(readFileSync(join(dir, "config.json"), "utf8"));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Env wins; otherwise $PLUGIN_DATA/config.json. Never invent a MAP_KEY. */
+function cred(name) {
+  if (process.env[name]) return String(process.env[name]);
+  const fromFile = loadFileConfig()[name];
+  return fromFile ? String(fromFile) : "";
+}
+
 function envFlag(name) {
-  const v = String(process.env[name] ?? "").trim().toLowerCase();
+  const v = String(cred(name) ?? "").trim().toLowerCase();
   return v === "1" || v === "true" || v === "yes" || v === "on";
 }
 
@@ -229,12 +250,12 @@ function firmsDateSpan(days, explicit) {
 }
 
 function requireFirmsKey() {
-  const key = String(process.env.FIRMS_MAP_KEY || "").trim();
+  const key = String(cred("FIRMS_MAP_KEY") || "").trim();
   if (!key) {
     return {
       error: errPayload(
         "config_error",
-        "FIRMS_MAP_KEY is not set. Obtain a free MAP_KEY from https://firms.modaps.eosdis.nasa.gov/api/ and set FIRMS_MAP_KEY in the host environment or mcp.json. This plugin never invents or embeds a key.",
+        "FIRMS_MAP_KEY is not set. Obtain a free MAP_KEY from https://firms.modaps.eosdis.nasa.gov/api/ and set FIRMS_MAP_KEY in the host environment or $PLUGIN_DATA/config.json. This plugin never invents or embeds a key.",
       ),
     };
   }
