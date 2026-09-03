@@ -74,6 +74,14 @@ steam-web — plug-and-play command node, args ["./server.mjs"].
 
 Base candidate-2. Grafted homepage/repository from candidate-1. Kept SOURCE_REGISTRY over flat TOOLS from candidates 1/3 (model-the-domain).
 
+## 0.1.5 — portable cwd, not machine paths
+
+**Chosen:** Shipped `mcp.json` is `node` + `["./server.mjs"]` + `"cwd": "./"`. Agent Plugins intends `./` as plugin-relative so Windows Cursor does not load `%USERPROFILE%\server.mjs`. User-facing README workaround (absolute paths in `%USERPROFILE%\.cursor\mcp.json` only) matches steam-web.
+
+**Declined — `${PLUGIN_ROOT}` in args / `"cwd": "${PLUGIN_ROOT}"` / `./scripts/run-mcp.cmd` as command:** Proven failures on the same Windows Cursor host. Cursor does not expand `${PLUGIN_ROOT}` in args; `cwd: "${PLUGIN_ROOT}"` yields `cmd.exe` ENOENT; a relative `./` command resolves against the Cursor install dir.
+
+**Declined — shipping `C:\Program Files\nodejs\node.exe` or a user home path:** Works on one machine; must stay in the user's mcp.json, never this repo.
+
 ## 0.1.4 — unused API as flags, not new tools
 
 **Chosen:** Fold leftover public endpoints into existing SOURCE_REGISTRY tools as optional args that default off. Delete SYNTHESIS.md rather than leave a stub.

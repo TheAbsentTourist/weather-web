@@ -146,7 +146,7 @@ child.stdin.write(
     params: {
       protocolVersion: "2024-11-05",
       capabilities: {},
-      clientInfo: { name: "weather-hazards-smoke", version: "0.1.4" },
+      clientInfo: { name: "weather-hazards-smoke", version: "0.1.5" },
     },
   }),
 );
@@ -204,7 +204,7 @@ function expectOk(label, msg, checks) {
 if (init?.result?.serverInfo?.name !== "weather-hazards") {
   fail("initialize serverInfo", init?.result?.serverInfo);
 }
-if (init?.result?.serverInfo?.version !== "0.1.4") {
+if (init?.result?.serverInfo?.version !== "0.1.5") {
   fail("initialize version", init?.result?.serverInfo?.version);
 }
 
