@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * Live MCP smoke: initialize, tools/list, then core tools
- * (nws_forecast periods, usgs_quakes hour, nhc_storms, jtwc_storms)
- * plus one A-extension check (nws_forecast product=hourly).
- * WEATHER_OPTIONAL=1 also hits A+C extensions.
+ * (nws periods/hourly/afd, usgs hour, nhc, jtwc + invests,
+ * nws_alerts, swpc scales, meteoalarm, firms kml).
+ * WEATHER_OPTIONAL=1 also hits optional extensions.
  * Spawns node ./server.mjs. Prints PASS/FAIL. Does not invent data.
  */
 import { spawn } from "node:child_process";
@@ -21,7 +21,7 @@ function frame(obj) {
   return Buffer.concat([Buffer.from(`Content-Length: ${payload.length}\r\n\r\n`, "utf8"), payload]);
 }
 
-function readMessages(child, count, timeoutMs = EXTENDED ? 180000 : 90000) {
+function readMessages(child, count, timeoutMs = EXTENDED ? 180000 : 150000) {
   return new Promise((resolve, reject) => {
     let buf = Buffer.alloc(0);
     const out = [];
@@ -108,8 +108,12 @@ const idJtwc = addCall("jtwc_storms", {});
 const idHourly = addCall("nws_forecast", { lat: LAT, lon: LON, product: "hourly", limit: 3 });
 const idAfd = addCall("nws_forecast", { lat: LAT, lon: LON, product: "afd" });
 const idJtwcInv = addCall("jtwc_storms", { include_invests: true, include_advisories: true });
+const idAlertsCore = addCall("nws_alerts", { lat: LAT, lon: LON, limit: 5 });
+const idSwpcCore = addCall("swpc_snapshot", { include_alerts: false });
+const idMeteo = addCall("meteoalarm_alerts", { country: "DE", limit: 5 });
+const idFirmsKml = addCall("firms_hotspots", { format: "kml", lat: LAT, lon: LON });
 
-let idAlerts, idUsgsSig, idSwpc, idOm, idGdacs, idEonet, idGvp, idFirms, idNhcAdv;
+let idAlerts, idUsgsSig, idSwpc, idOm, idOmAq, idGdacs, idEonet, idGvp, idFirms, idNhcAdv, idTypes, idKp3h;
 if (EXTENDED) {
   idAlerts = addCall("nws_alerts", { lat: LAT, lon: LON, event: "Flood Warning", status: "actual" });
   idUsgsSig = addCall("usgs_quakes", { feed: "significant_week", limit: 5 });
@@ -120,11 +124,14 @@ if (EXTENDED) {
     include_events: true,
   });
   idOm = addCall("open_meteo_forecast", { name: "Austin", forecast_days: 2, hourly: true });
+  idOmAq = addCall("open_meteo_forecast", { lat: LAT, lon: LON, mode: "air_quality", forecast_days: 1 });
   idGdacs = addCall("gdacs_events", { mode: "rss_full", limit: 5 });
   idEonet = addCall("eonet_events", { limit: 5, format: "json" });
-  idGvp = addCall("gvp_weekly", { mode: "weekly" });
+  idGvp = addCall("gvp_weekly", { mode: "weekly", limit: 5 });
   idFirms = addCall("firms_hotspots", { lat: LAT, lon: LON, radius_km: 50 });
   idNhcAdv = addCall("nhc_storms", { include_advisories: true, include_outlook: true });
+  idTypes = addCall("nws_alerts", { mode: "types" });
+  idKp3h = addCall("swpc_snapshot", { include_alerts: false, include_kp_3h: true });
 }
 
 const replyCount = 2 + calls.length; // initialize + tools/list + calls
@@ -144,7 +151,7 @@ child.stdin.write(
     params: {
       protocolVersion: "2024-11-05",
       capabilities: {},
-      clientInfo: { name: "weather-hazards-smoke", version: "0.1.3" },
+      clientInfo: { name: "weather-hazards-smoke", version: "0.1.4" },
     },
   }),
 );
@@ -202,7 +209,7 @@ function expectOk(label, msg, checks) {
 if (init?.result?.serverInfo?.name !== "weather-hazards") {
   fail("initialize serverInfo", init?.result?.serverInfo);
 }
-if (init?.result?.serverInfo?.version !== "0.1.3") {
+if (init?.result?.serverInfo?.version !== "0.1.4") {
   fail("initialize version", init?.result?.serverInfo?.version);
 }
 
@@ -326,6 +333,50 @@ if (jtwcInvPayload) {
       invests.length ? invests.map((st) => st.id).join(",") : "(no INVEST this run)",
     );
   }
+  if (jtwcInvPayload.advisories && !Array.isArray(jtwcInvPayload.advisories)) {
+    fail("jtwc include_advisories missing array", { keys: Object.keys(jtwcInvPayload) });
+  } else if (jtwcInvPayload.advisories) {
+    console.log("PASS jtwc include_advisories count=", jtwcInvPayload.advisory_count ?? jtwcInvPayload.advisories.length);
+  }
+}
+
+const alertsCore = expectOk("nws_alerts", byId.get(idAlertsCore), {
+  type: "OfficialAlertList",
+  confidence_tier: "official",
+});
+if (alertsCore) {
+  if (!Array.isArray(alertsCore.alerts)) fail("nws_alerts alerts missing", { keys: Object.keys(alertsCore) });
+  else console.log("PASS nws_alerts count=", alertsCore.count, "point=", `${LAT},${LON}`);
+}
+
+const swpcCore = expectOk("swpc_snapshot", byId.get(idSwpcCore), {
+  type: "SpaceWeatherSnapshot",
+  confidence_tier: "specialist",
+});
+if (swpcCore) {
+  if (!swpcCore.scales || !(swpcCore.scales.current || swpcCore.scales.forecast_1 || swpcCore.scales.forecast_2)) {
+    fail("swpc scales missing", swpcCore.scales);
+  } else {
+    console.log("PASS swpc_snapshot scales", Object.keys(swpcCore.scales).join(","));
+  }
+}
+
+const meteo = expectOk("meteoalarm_alerts", byId.get(idMeteo), {
+  type: "OfficialAlertList",
+  confidence_tier: "official",
+});
+if (meteo) {
+  console.log("PASS meteoalarm_alerts country=", meteo.country, "count=", meteo.count);
+}
+
+const firmsKml = expectOk("firms_hotspots kml", byId.get(idFirmsKml), {
+  type: "FireFootprintKml",
+  confidence_tier: "overlay",
+});
+if (firmsKml) {
+  if (firmsKml.error === "config_error") fail("firms kml should not need MAP_KEY", firmsKml);
+  else if (firmsKml.mode !== "kml") fail("firms kml mode", firmsKml.mode);
+  else console.log("PASS firms_hotspots kml region=", firmsKml.region, "bytes=", firmsKml.bytes);
 }
 
 if (EXTENDED) {
@@ -385,6 +436,18 @@ if (EXTENDED) {
     }
   }
 
+  const omAq = expectOk("open_meteo air_quality", byId.get(idOmAq), {
+    type: "PointForecast",
+    confidence_tier: "overlay",
+  });
+  if (omAq) {
+    if (omAq.mode !== "air_quality" || !omAq.current) {
+      fail("open_meteo air_quality missing current", { mode: omAq.mode, keys: Object.keys(omAq) });
+    } else {
+      console.log("PASS open_meteo_forecast air_quality us_aqi=", omAq.current?.us_aqi ?? omAq.current?.european_aqi);
+    }
+  }
+
   const gdacs = expectOk("gdacs rss_full", byId.get(idGdacs), {
     type: "ImpactAlertList",
     confidence_tier: "specialist",
@@ -408,10 +471,10 @@ if (EXTENDED) {
     confidence_tier: "specialist",
   });
   if (gvp) {
-    if (!(gvp.count > 1)) {
-      fail("gvp_weekly count expected >1 (CAP <info> mapping)", { format: gvp.format, count: gvp.count });
+    if (!(gvp.count > 0) || gvp.count > 5) {
+      fail("gvp_weekly limit=5 not honored", { format: gvp.format, count: gvp.count, total: gvp.total });
     } else {
-      console.log("PASS gvp_weekly format=", gvp.format, "count=", gvp.count);
+      console.log("PASS gvp_weekly format=", gvp.format, "count=", gvp.count, "total=", gvp.total);
     }
   }
 
@@ -432,6 +495,27 @@ if (EXTENDED) {
     else console.log("PASS nhc_storms include_advisories count=", nhcAdv.advisory_count ?? nhcAdv.advisories.length);
     if (!Array.isArray(nhcAdv.outlooks)) fail("nhc outlooks missing", { keys: Object.keys(nhcAdv) });
     else console.log("PASS nhc_storms include_outlook count=", nhcAdv.outlook_count ?? nhcAdv.outlooks.length);
+  }
+
+  const types = expectOk("nws_alerts types", byId.get(idTypes), {
+    type: "NwsAlertTypes",
+    confidence_tier: "official",
+  });
+  if (types) {
+    if (!Array.isArray(types.eventTypes) || types.count < 1) {
+      fail("nws_alerts types empty", { count: types.count });
+    } else {
+      console.log("PASS nws_alerts types count=", types.count);
+    }
+  }
+
+  const kp3h = expectOk("swpc kp_3h", byId.get(idKp3h), {
+    type: "SpaceWeatherSnapshot",
+    confidence_tier: "specialist",
+  });
+  if (kp3h) {
+    if (!kp3h.kp_3h || kp3h.kp_3h.error) fail("swpc kp_3h missing", kp3h.kp_3h);
+    else console.log("PASS swpc_snapshot include_kp_3h Kp=", kp3h.kp_3h.latest?.Kp);
   }
 }
 

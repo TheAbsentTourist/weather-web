@@ -74,6 +74,14 @@ steam-web — plug-and-play command node, args ["./server.mjs"].
 
 Base candidate-2. Grafted homepage/repository from candidate-1. Kept SOURCE_REGISTRY over flat TOOLS from candidates 1/3 (model-the-domain).
 
+## 0.1.4 — unused API as flags, not new tools
+
+**Chosen:** Fold leftover public endpoints into existing SOURCE_REGISTRY tools as optional args that default off. Delete SYNTHESIS.md rather than leave a stub.
+
+**Declined — Pleistocene GVP gazetteer:** not sketched; Holocene lookup stays the catalog path.
+
+**Declined — FIRMS missing_data without a key:** keyed only; kml stays the keyless core path.
+
 ## 0.1.3 — flags on existing tools vs new mega-tools
 
 **Chosen:** Bugfixes + top-5 adds as modes/flags/mapper fields on SOURCE_REGISTRY tools
