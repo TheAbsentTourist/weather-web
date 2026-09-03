@@ -69,4 +69,29 @@ assert.equal(server.env?.WEATHER_ENABLE_GDACS, "${WEATHER_ENABLE_GDACS}");
 assert.equal(server.env?.WEATHER_ENABLE_GVP, "${WEATHER_ENABLE_GVP}");
 assert.equal(server.env?.WEATHER_ENABLE_OPEN_METEO, "${WEATHER_ENABLE_OPEN_METEO}");
 
+const cursorPlugin = JSON.parse(readFileSync(join(root, ".cursor-plugin/plugin.json"), "utf8"));
+const vars = cursorPlugin.variables?.properties ?? {};
+assert.ok(vars.FIRMS_MAP_KEY, "FIRMS_MAP_KEY must be declared in .cursor-plugin/plugin.json variables");
+assert.equal(vars.FIRMS_MAP_KEY.type, "string");
+assert.equal(vars.WEATHER_OPTIONAL, undefined, "WEATHER_OPTIONAL must not appear in Configure variables");
+assert.ok(!cursorPlugin.variables?.required?.length, "Configure variables must not be required");
+assert.ok(!cursorPlugin.variables?.required?.includes("FIRMS_MAP_KEY"));
+
+const configureVars = ["WEATHER_ENABLE_EONET", "WEATHER_ENABLE_GDACS", "WEATHER_ENABLE_GVP", "WEATHER_ENABLE_OPEN_METEO"];
+for (const name of configureVars) {
+  assert.ok(vars[name], `${name} must be declared in .cursor-plugin/plugin.json variables`);
+  assert.deepEqual(vars[name].enum, ["", "1"], `${name} should be a "" / "1" toggle`);
+}
+
+const placeholders = new Set();
+for (const value of Object.values(server.env ?? {})) {
+  for (const m of String(value).matchAll(/\$\{([A-Z][A-Z0-9_]*)\}/g)) {
+    placeholders.add(m[1]);
+  }
+}
+for (const name of placeholders) {
+  if (name === "WEATHER_OPTIONAL") continue;
+  assert.ok(vars[name], `mcp.json env placeholder \${${name}} must appear in .cursor-plugin/plugin.json variables.properties`);
+}
+
 console.log("mcp-path-test: PASS");

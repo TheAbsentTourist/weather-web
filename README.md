@@ -192,12 +192,14 @@ If you are an AI assistant installing this for a user:
 
 ## Environment
 
-Set in **Plugins → Configure**, in the host environment, or in `mcp.json` `env`.
+Set `FIRMS_MAP_KEY` via **Plugins → Configure** (Cursor), the host environment, or `$PLUGIN_DATA/config.json` copied from `config.example.json`. Do not paste keys into the repo.
+
+**Plugins → Configure** shows `FIRMS_MAP_KEY` and the four per-source toggles (`WEATHER_ENABLE_EONET`, `WEATHER_ENABLE_GDACS`, `WEATHER_ENABLE_GVP`, `WEATHER_ENABLE_OPEN_METEO`). There is no master `WEATHER_OPTIONAL` control in that UI; that flag still works from env / `config.json` / CLI (`WEATHER_OPTIONAL=1`).
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `FIRMS_MAP_KEY` | FIRMS `csv`, `status`, `availability`, `missing_data` | NASA FIRMS MAP_KEY |
-| `WEATHER_OPTIONAL=1` | No | Turn on every optional tool |
+| `WEATHER_OPTIONAL=1` | No | Turn on every optional tool (env / `config.json` / CLI only) |
 | `WEATHER_ENABLE_EONET=1` | No | `eonet_events` only |
 | `WEATHER_ENABLE_GDACS=1` | No | `gdacs_events` only |
 | `WEATHER_ENABLE_GVP=1` | No | `gvp_weekly` only |
@@ -282,4 +284,4 @@ Issues: https://github.com/TheAbsentTourist/weather-web/issues
 
 Community project — best-effort support, no SLA. Do not paste API keys or Steam/FIRMS secrets into issues.
 
-More detail: [TERMS.md](TERMS.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.5.md](CHANGELOG-0.1.5.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).
+More detail: [TERMS.md](TERMS.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.6.md](CHANGELOG-0.1.6.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).

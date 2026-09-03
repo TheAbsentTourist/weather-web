@@ -1,0 +1,60 @@
+{
+  "name": "weather-hazards",
+  "displayName": "Weather Hazards",
+  "version": "0.1.6",
+  "description": "Weather + disaster hazards: NWS forecast/alerts, USGS earthquakes, NHC storms, JTWC (WP/IO/SH), NOAA SWPC, MeteoAlarm (EU), NASA FIRMS. Optional: EONET, GDACS, GVP, Open-Meteo.",
+  "author": {
+    "name": "TheAbsentTourist",
+    "email": "chucktastictime@gmail.com",
+    "url": "https://github.com/TheAbsentTourist"
+  },
+  "license": "MIT",
+  "keywords": [
+    "weather",
+    "hazards",
+    "nws",
+    "earthquake",
+    "hurricane",
+    "jtwc",
+    "typhoon",
+    "alerts",
+    "disaster"
+  ],
+  "homepage": "https://github.com/TheAbsentTourist/weather-web",
+  "repository": "https://github.com/TheAbsentTourist/weather-web",
+  "mcpServers": "./mcp.json",
+  "variables": {
+    "type": "object",
+    "properties": {
+      "FIRMS_MAP_KEY": {
+        "type": "string",
+        "title": "NASA FIRMS MAP_KEY",
+        "description": "Free MAP_KEY from https://firms.modaps.eosdis.nasa.gov/api/ (area API signup). Needed only for FIRMS csv, status, availability, and missing_data. Most tools work without it. Never invent or commit a key."
+      },
+      "WEATHER_ENABLE_EONET": {
+        "type": "string",
+        "title": "Enable EONET",
+        "description": "Set to 1 to enable eonet_events. Leave blank to leave it off.",
+        "enum": ["", "1"]
+      },
+      "WEATHER_ENABLE_GDACS": {
+        "type": "string",
+        "title": "Enable GDACS",
+        "description": "Set to 1 to enable gdacs_events. Leave blank to leave it off.",
+        "enum": ["", "1"]
+      },
+      "WEATHER_ENABLE_GVP": {
+        "type": "string",
+        "title": "Enable GVP",
+        "description": "Set to 1 to enable gvp_weekly. Leave blank to leave it off.",
+        "enum": ["", "1"]
+      },
+      "WEATHER_ENABLE_OPEN_METEO": {
+        "type": "string",
+        "title": "Enable Open-Meteo",
+        "description": "Set to 1 to enable open_meteo_forecast. Leave blank to leave it off.",
+        "enum": ["", "1"]
+      }
+    }
+  }
+}
