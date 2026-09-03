@@ -1,6 +1,6 @@
 {
   "name": "weather-hazards",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": false,
   "type": "module",
   "description": "Agent Plugin: weather and disaster hazard MCP tools (NWS, USGS, NHC, JTWC, SWPC, MeteoAlarm, FIRMS; optional EONET/GDACS/GVP/Open-Meteo).",
@@ -14,7 +14,8 @@
   "license": "MIT",
   "scripts": {
     "smoke": "node ./scripts/smoke.mjs",
-    "check": "node --check ./server.mjs"
+    "check": "node --check ./server.mjs",
+    "mcp-path": "node ./scripts/mcp-path-test.mjs"
   },
   "repository": {
     "type": "git",

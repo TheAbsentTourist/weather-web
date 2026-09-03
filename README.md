@@ -1,6 +1,6 @@
 # weather-hazards
 
-**Agent Plugin / MCP server** (v0.1.4) for weather and disaster hazard feeds.
+**Agent Plugin / MCP server** (v0.1.5) for weather and disaster hazard feeds.
 
 This repository is **not a website**. It is a zero-dependency Node.js stdio MCP that agents (Cursor and other MCP hosts) can call for official and specialist hazard data.
 
@@ -38,15 +38,20 @@ New capability is added as **modes and flags on existing tools**. A new source o
 
 ## Install
 
-Requires Node.js 18+. Copy or symlink the repo into the Cursor local plugins directory:
+Requires **Node.js 18+** ([nodejs.org](https://nodejs.org)). Copy or clone this repo into Cursor’s local plugins folder as a **real directory** (not a symlink from somewhere else):
 
-```bash
-cp -R . ~/.cursor/plugins/local/weather-hazards
-# or
-ln -s "$(pwd)" ~/.cursor/plugins/local/weather-hazards
+```text
+Windows:      %USERPROFILE%\.cursor\plugins\local\weather-hazards
+macOS/Linux:  ~/.cursor/plugins/local/weather-hazards
 ```
 
-`mcp.json` already wires the stdio server:
+```bash
+git clone https://github.com/TheAbsentTourist/weather-web.git ~/.cursor/plugins/local/weather-hazards
+```
+
+Then reload Cursor (**Developer: Reload Window**).
+
+Public `mcp.json` is the portable spawn other hosts already use (`cwd` `"./"` is plugin-relative):
 
 ```json
 {
@@ -55,6 +60,7 @@ ln -s "$(pwd)" ~/.cursor/plugins/local/weather-hazards
       "type": "stdio",
       "command": "node",
       "args": ["./server.mjs"],
+      "cwd": "./",
       "env": {
         "FIRMS_MAP_KEY": "${FIRMS_MAP_KEY}",
         "WEATHER_OPTIONAL": "${WEATHER_OPTIONAL}",
@@ -68,7 +74,30 @@ ln -s "$(pwd)" ~/.cursor/plugins/local/weather-hazards
 }
 ```
 
-Set those environment variables in the host / Cursor plugin config. Reload the IDE window after install.
+Set those environment variables in the host / Cursor plugin config (or the environment the host inherits). Do **not** commit machine-absolute paths to this repo.
+
+### Windows: if MCP looks for `server.mjs` in your home folder
+
+Cursor on Windows sometimes starts this plugin’s MCP with cwd = your user folder, so `./server.mjs` becomes `%USERPROFILE%\server.mjs`. The reliable workaround is a **user** MCP entry with full paths.
+
+Create or edit `%USERPROFILE%\.cursor\mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "weather-hazards": {
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\YOUR_USERNAME\\.cursor\\plugins\\local\\weather-hazards\\server.mjs"
+      ]
+    }
+  }
+}
+```
+
+Replace `YOUR_USERNAME` (and the Node path if yours is not under `Program Files`). After installing Node, **fully quit Cursor** and reopen it — Reload Window is not enough for PATH changes.
+
+Then set env vars under **Plugins → Configure**, or in the environment the host inherits.
 
 ### Environment
 
@@ -88,13 +117,13 @@ FIRMS `kml` works without a key (regional footprint). The other FIRMS modes retu
 Most fetches identify as:
 
 ```
-WeatherHazardsPlugin/0.1.4 (contact: chucktastictime@gmail.com)
+WeatherHazardsPlugin/0.1.5 (contact: chucktastictime@gmail.com)
 ```
 
 JTWC is behind CloudFront and often 403s a generic UA, so those fetches use a browser-like UA that still names the plugin:
 
 ```
-Mozilla/5.0 (compatible; WeatherHazardsPlugin/0.1.4; +https://github.com/TheAbsentTourist/weather-web)
+Mozilla/5.0 (compatible; WeatherHazardsPlugin/0.1.5; +https://github.com/TheAbsentTourist/weather-web)
 ```
 
 ---
@@ -188,11 +217,12 @@ Default geographic point: Austin, TX ≈ `30.2672, -97.7431`.
 
 ```bash
 node --check server.mjs
+node scripts/mcp-path-test.mjs
 node scripts/smoke.mjs
 WEATHER_OPTIONAL=1 node scripts/smoke.mjs
 ```
 
-Verification snapshot: [VERIFY.md](VERIFY.md). Changes in this version: [CHANGELOG-0.1.4.md](CHANGELOG-0.1.4.md).
+Verification snapshot: [VERIFY.md](VERIFY.md). Changes in this version: [CHANGELOG-0.1.5.md](CHANGELOG-0.1.5.md).
 
 ---
 
@@ -203,5 +233,7 @@ Verification snapshot: [VERIFY.md](VERIFY.md). Changes in this version: [CHANGEL
 | [TERMS.md](TERMS.md) | Attribution, source table, secrets policy, no-warranty |
 | [RATIONALE.md](RATIONALE.md) | Why registry-per-source, no mega-tool, flag-not-tool |
 | [VERIFY.md](VERIFY.md) | Last smoke results |
+| [CHANGELOG-0.1.5.md](CHANGELOG-0.1.5.md) | 0.1.5 Windows MCP cwd fix |
 | [CHANGELOG-0.1.4.md](CHANGELOG-0.1.4.md) | 0.1.4 risk fixes and folded flags |
+| [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md) | Cursor Windows plugin MCP spawn (host bugs) |
 | [LICENSE](LICENSE) | MIT |

@@ -5,6 +5,7 @@
       "type": "stdio",
       "command": "node",
       "args": ["./server.mjs"],
+      "cwd": "./",
       "env": {
         "FIRMS_MAP_KEY": "${FIRMS_MAP_KEY}",
         "WEATHER_OPTIONAL": "${WEATHER_OPTIONAL}",
