@@ -109,11 +109,15 @@ function loadFileConfig() {
 function cred(name) {
   if (process.env[name]) return String(process.env[name]);
   const fromFile = loadFileConfig()[name];
+  if (fromFile === true) return "1";
+  if (fromFile === false) return "";
   return fromFile ? String(fromFile) : "";
 }
 
 function envFlag(name) {
-  const v = String(cred(name) ?? "").trim().toLowerCase();
+  const raw = cred(name);
+  if (raw === true) return true;
+  const v = String(raw ?? "").trim().toLowerCase();
   return v === "1" || v === "true" || v === "yes" || v === "on";
 }
 

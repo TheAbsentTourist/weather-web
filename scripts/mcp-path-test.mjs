@@ -73,9 +73,12 @@ const cursorPlugin = JSON.parse(readFileSync(join(root, ".cursor-plugin/plugin.j
 const vars = cursorPlugin.variables?.properties ?? {};
 assert.ok(vars.FIRMS_MAP_KEY, "FIRMS_MAP_KEY must be declared in .cursor-plugin/plugin.json variables");
 assert.equal(vars.FIRMS_MAP_KEY.type, "string");
-assert.equal(vars.WEATHER_OPTIONAL, undefined, "WEATHER_OPTIONAL must not appear in Configure variables");
+assert.ok(vars.WEATHER_OPTIONAL, "WEATHER_OPTIONAL must be the primary Configure optional-tools toggle");
+assert.deepEqual(vars.WEATHER_OPTIONAL.enum, ["", "1"], "WEATHER_OPTIONAL should be a \"\" / \"1\" toggle");
+assert.match(vars.WEATHER_OPTIONAL.title || "", /optional tools/i);
 assert.ok(!cursorPlugin.variables?.required?.length, "Configure variables must not be required");
 assert.ok(!cursorPlugin.variables?.required?.includes("FIRMS_MAP_KEY"));
+assert.ok(!cursorPlugin.variables?.required?.includes("WEATHER_OPTIONAL"));
 
 const configureVars = ["WEATHER_ENABLE_EONET", "WEATHER_ENABLE_GDACS", "WEATHER_ENABLE_GVP", "WEATHER_ENABLE_OPEN_METEO"];
 for (const name of configureVars) {
@@ -90,7 +93,6 @@ for (const value of Object.values(server.env ?? {})) {
   }
 }
 for (const name of placeholders) {
-  if (name === "WEATHER_OPTIONAL") continue;
   assert.ok(vars[name], `mcp.json env placeholder \${${name}} must appear in .cursor-plugin/plugin.json variables.properties`);
 }
 

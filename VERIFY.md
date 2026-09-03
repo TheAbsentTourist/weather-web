@@ -12,7 +12,7 @@ Date: 2026-09-03 UTC
 | Check | Result |
 |---|---|
 | `node --check server.mjs` | **PASS** |
-| `node scripts/mcp-path-test.mjs` | **PASS** — portable `node` + `["./server.mjs"]` + `cwd` `"./"`; `FIRMS_MAP_KEY` + four `WEATHER_ENABLE_*` in Configure variables; `WEATHER_OPTIONAL` in mcp.json env only (not in variables) |
+| `node scripts/mcp-path-test.mjs` | pending re-run after master `WEATHER_OPTIONAL` Configure toggle |
 | Core smoke (`scripts/smoke.mjs`) | **PASS** — see lines below |
 | `WEATHER_OPTIONAL=1` extended smoke | **PASS** — FIRMS csv `config_error`; optional tools listed |
 | FIRMS without key | `config_error` on csv; kml keyless **PASS** |
@@ -21,7 +21,7 @@ Date: 2026-09-03 UTC
 
 ## Configure schema
 
-Plugins → Configure is `FIRMS_MAP_KEY` plus per-source toggles only. Master `WEATHER_OPTIONAL` is omitted from the UI schema; env / `$PLUGIN_DATA/config.json` / CLI still honor it. This environment cannot prove the Configure UI click.
+Plugins → Configure: `FIRMS_MAP_KEY`, master **Enable optional tools** (`WEATHER_OPTIONAL`), plus per-source `WEATHER_ENABLE_*` finer toggles. None required. This environment cannot prove the Configure UI click.
 
 ## Core smoke PASS lines (live, not invented)
 
@@ -64,4 +64,4 @@ Core (8): nws_forecast, nws_alerts, usgs_quakes, nhc_storms, jtwc_storms, swpc_s
 Optional (4): eonet_events, gdacs_events, gvp_weekly, open_meteo_forecast
 
 ## IDE note
-Reload Window / Customize to see the plugin. Set `FIRMS_MAP_KEY` and per-source `WEATHER_ENABLE_*` under Plugins → Configure. This environment cannot prove the Configure UI click or Windows Cursor plugin spawn.
+Reload Window / Customize to see the plugin. Set `FIRMS_MAP_KEY` and flip **Enable optional tools** (or per-source `WEATHER_ENABLE_*`) under Plugins → Configure. This environment cannot prove the Configure UI click or Windows Cursor plugin spawn.

@@ -4,7 +4,7 @@ Date: 2026-09-03
 
 ## Summary
 
-Cursor **Plugins → Configure** for NASA FIRMS `MAP_KEY` and per-source optional toggles, matching steam-web. Dual manifest: root Agent `plugin.json` kept; Cursor `.cursor-plugin/plugin.json` added. No master `WEATHER_OPTIONAL` toggle in Configure. No invented FIRMS key. No marketplace submit.
+Cursor **Plugins → Configure** for NASA FIRMS `MAP_KEY`, a master **Enable optional tools** toggle (`WEATHER_OPTIONAL`), and per-source `WEATHER_ENABLE_*` finer control, matching steam-web. Dual manifest: root Agent `plugin.json` kept; Cursor `.cursor-plugin/plugin.json` added. No invented FIRMS key. No marketplace submit.
 
 ## Global
 
@@ -14,20 +14,19 @@ Cursor **Plugins → Configure** for NASA FIRMS `MAP_KEY` and per-source optiona
 
 ## Plugins → Configure
 
-- **`.cursor-plugin/plugin.json`:** Cursor Plugin manifest (`displayName` Weather Hazards). `mcpServers`: `"./mcp.json"`. `variables` JSON Schema (none required): `FIRMS_MAP_KEY` (string) plus per-source toggles `WEATHER_ENABLE_EONET` / `WEATHER_ENABLE_GDACS` / `WEATHER_ENABLE_GVP` / `WEATHER_ENABLE_OPEN_METEO` (`enum` `""` / `"1"`). **No** `WEATHER_OPTIONAL` in the schema so Configure does not show a master toggle. No logo (no assets). No secret values.
-- **`config.example.json`:** empty placeholders (including `WEATHER_OPTIONAL` for CLI/host/`config.json`). Copy to `$PLUGIN_DATA/config.json`; do not commit a real MAP_KEY.
-- **`server.mjs`:** load creds from `process.env` first, then `$PLUGIN_DATA/config.json` (steam-web helper). `requireFirmsKey` and optional enable flags (including `WEATHER_OPTIONAL` if set in env/`config.json`) use that helper. Empty key → existing `config_error` with FIRMS signup URL.
-- **`mcp.json`:** unchanged portable spawn (`node` + `["./server.mjs"]` + `"cwd": "./"`). Keep `${WEATHER_OPTIONAL}` and other placeholders for CLI/host compatibility.
-- **README:** set `FIRMS_MAP_KEY` via Plugins → Configure, env, or `$PLUGIN_DATA/config.json`. Do not paste keys into the repo.
+- **`.cursor-plugin/plugin.json`:** Cursor Plugin manifest (`displayName` Weather Hazards). `mcpServers`: `"./mcp.json"`. `variables` JSON Schema (none required): `FIRMS_MAP_KEY` (string); primary `WEATHER_OPTIONAL` toggle (`enum` `""` / `"1"`, title **Enable optional tools (EONET, GDACS, GVP, Open-Meteo)**); per-source finer toggles `WEATHER_ENABLE_EONET` / `WEATHER_ENABLE_GDACS` / `WEATHER_ENABLE_GVP` / `WEATHER_ENABLE_OPEN_METEO` (same enum, titles like **Enable EONET only**). String enum (steam-web style) so `${VAR}` substitutes into mcp.json env. No logo (no assets). No secret values.
+- **`config.example.json`:** empty placeholders. Copy to `$PLUGIN_DATA/config.json`; do not commit a real MAP_KEY.
+- **`server.mjs`:** load creds from `process.env` first, then `$PLUGIN_DATA/config.json` (steam-web helper). `requireFirmsKey` and optional flags use that helper. Boolean `true` / `"1"` / `"true"` count as enabled. Empty key → existing `config_error` with FIRMS signup URL.
+- **`mcp.json`:** unchanged portable spawn (`node` + `["./server.mjs"]` + `"cwd": "./"`) and `${WEATHER_OPTIONAL}` / `${WEATHER_ENABLE_*}` placeholders.
+- **README:** optional tools stay off until the Configure toggle (or `WEATHER_OPTIONAL=1`).
 
 ## Tests
 
-- `scripts/mcp-path-test.mjs`: assert `.cursor-plugin/plugin.json` declares `FIRMS_MAP_KEY` and the four `WEATHER_ENABLE_*` toggles; `WEATHER_OPTIONAL` stays in `mcp.json` env but is omitted from Configure `variables`.
+- `scripts/mcp-path-test.mjs`: assert `.cursor-plugin/plugin.json` declares `FIRMS_MAP_KEY`, master `WEATHER_OPTIONAL`, and the four `WEATHER_ENABLE_*` toggles; every `${VAR}` in `mcp.json` env appears in `variables.properties`.
 - Smoke still expects FIRMS csv without a key → `config_error`.
 
 ## Not in 0.1.6
 
 - Marketplace submit
-- Making `FIRMS_MAP_KEY` required (would break NWS-only installs)
-- A master `WEATHER_OPTIONAL` control in Plugins → Configure
+- Making `FIRMS_MAP_KEY` or optional toggles required (would break NWS-only installs)
 - Removing `cwd` `"./"` from `mcp.json`

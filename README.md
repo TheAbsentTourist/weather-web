@@ -194,12 +194,12 @@ If you are an AI assistant installing this for a user:
 
 Set `FIRMS_MAP_KEY` via **Plugins → Configure** (Cursor), the host environment, or `$PLUGIN_DATA/config.json` copied from `config.example.json`. Do not paste keys into the repo.
 
-**Plugins → Configure** shows `FIRMS_MAP_KEY` and the four per-source toggles (`WEATHER_ENABLE_EONET`, `WEATHER_ENABLE_GDACS`, `WEATHER_ENABLE_GVP`, `WEATHER_ENABLE_OPEN_METEO`). There is no master `WEATHER_OPTIONAL` control in that UI; that flag still works from env / `config.json` / CLI (`WEATHER_OPTIONAL=1`).
+Optional tools stay off until you flip **Enable optional tools** in Plugins → Configure (or set `WEATHER_OPTIONAL=1`). Per-source `WEATHER_ENABLE_*` toggles are finer control.
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `FIRMS_MAP_KEY` | FIRMS `csv`, `status`, `availability`, `missing_data` | NASA FIRMS MAP_KEY |
-| `WEATHER_OPTIONAL=1` | No | Turn on every optional tool (env / `config.json` / CLI only) |
+| `WEATHER_OPTIONAL=1` | No | Turn on every optional tool (Configure / env / `config.json`) |
 | `WEATHER_ENABLE_EONET=1` | No | `eonet_events` only |
 | `WEATHER_ENABLE_GDACS=1` | No | `gdacs_events` only |
 | `WEATHER_ENABLE_GVP=1` | No | `gvp_weekly` only |
@@ -239,7 +239,7 @@ Always listed. No extra keys except FIRMS CSV-family modes.
 
 ## Optional tools
 
-Hidden until `WEATHER_OPTIONAL=1` or the matching `WEATHER_ENABLE_*` flag.
+Hidden until you flip **Enable optional tools** in Plugins → Configure (or set `WEATHER_OPTIONAL=1`) or the matching `WEATHER_ENABLE_*` flag.
 
 | Tool | What you get | Tier |
 |------|----------------|------|
