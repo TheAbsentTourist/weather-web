@@ -12,7 +12,7 @@ Date: 2026-09-03 UTC
 | Check | Result |
 |---|---|
 | `node --check server.mjs` | **PASS** |
-| `node scripts/mcp-path-test.mjs` | pending re-run after master `WEATHER_OPTIONAL` Configure toggle |
+| `node scripts/mcp-path-test.mjs` | **PASS** — portable `node` + `["./server.mjs"]` + `cwd` `"./"`; `FIRMS_MAP_KEY` + master `WEATHER_OPTIONAL` + four `WEATHER_ENABLE_*` in Configure variables; every `${VAR}` in mcp.json env declared |
 | Core smoke (`scripts/smoke.mjs`) | **PASS** — see lines below |
 | `WEATHER_OPTIONAL=1` extended smoke | **PASS** — FIRMS csv `config_error`; optional tools listed |
 | FIRMS without key | `config_error` on csv; kml keyless **PASS** |
