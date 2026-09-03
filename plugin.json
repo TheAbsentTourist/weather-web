@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "weather-hazards",
+  "version": "0.1.3",
+  "description": "Weather + disaster hazards: NWS forecast/alerts, USGS earthquakes, NHC storms, JTWC (WP/IO/SH), NOAA SWPC, MeteoAlarm (EU), NASA FIRMS. Optional: EONET, GDACS, GVP, Open-Meteo.",
+  "author": {
+    "name": "TheAbsentTourist",
+    "email": "chucktastictime@gmail.com",
+    "url": "https://github.com/TheAbsentTourist"
+  },
+  "license": "MIT",
+  "keywords": [
+    "weather",
+    "hazards",
+    "nws",
+    "earthquake",
+    "hurricane",
+    "jtwc",
+    "typhoon",
+    "alerts",
+    "disaster"
+  ],
+  "homepage": "https://github.com/TheAbsentTourist/weather-web",
+  "repository": "https://github.com/TheAbsentTourist/weather-web"
+}
