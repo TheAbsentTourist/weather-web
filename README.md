@@ -29,7 +29,7 @@ Optional (off until you enable them): NASA EONET, GDACS, Smithsonian GVP, Open-M
 
 Use **NHC** for AL / EP / CP. Use **JTWC** for WP / IO / SH. Do not ask JTWC for East or Central Pacific.
 
-Most tools work with no API key. FIRMS CSV-family modes need a NASA FIRMS MAP_KEY. Never invent a key.
+Most tools work with no API key. FIRMS CSV-family modes need a NASA FIRMS MAP_KEY. These can be obtained at https://firms.modaps.eosdis.nasa.gov/api/area/
 
 ---
 
