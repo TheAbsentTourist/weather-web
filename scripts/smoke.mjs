@@ -1,11 +1,5 @@
 #!/usr/bin/env node
-/**
- * Live MCP smoke: initialize, tools/list, then core tools
- * (nws periods/hourly/afd, usgs hour, nhc, jtwc + invests,
- * nws_alerts, swpc scales, meteoalarm, firms kml).
- * WEATHER_OPTIONAL=1 also hits optional extensions.
- * Spawns node ./server.mjs. Prints PASS/FAIL. Does not invent data.
- */
+/** Live MCP smoke. Spawns node ./server.mjs. Prints PASS/FAIL. Does not invent data. */
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -134,7 +128,8 @@ if (EXTENDED) {
   idKp3h = addCall("swpc_snapshot", { include_alerts: false, include_kp_3h: true });
 }
 
-const replyCount = 2 + calls.length; // initialize + tools/list + calls
+const INIT_AND_LIST = 2;
+const replyCount = INIT_AND_LIST + calls.length;
 
 const child = spawn("node", ["./server.mjs"], {
   cwd: root,
@@ -264,7 +259,6 @@ if (nhcPayload) {
   console.log("PASS nhc_storms count=", nhcPayload.count, sample.length ? sample.join(",") : "(none active)");
 }
 
-// JTWC: PASS if HTTP/shape works even when count=0 (empty basins are OK)
 const jtwcPayload = expectOk("jtwc_storms", byId.get(idJtwc), {
   type: "TropicalStormList",
   confidence_tier: "specialist",
@@ -284,9 +278,6 @@ const hourlyPayload = expectOk("nws_forecast hourly", byId.get(idHourly), {
   confidence_tier: "official",
 });
 if (hourlyPayload) {
-  if (hourlyPayload.product !== "hourly" && hourlyPayload.extra?.product !== "hourly") {
-    // product is on extra via toPointForecast spread
-  }
   if (!Array.isArray(hourlyPayload.periods) || hourlyPayload.periods.length < 1) {
     fail("nws_forecast hourly periods empty", hourlyPayload.periods);
   } else if (hourlyPayload.product !== "hourly") {

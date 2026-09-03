@@ -611,7 +611,7 @@ function meteoalarmCountrySlug(raw) {
     uk: "united-kingdom",
     "great-britain": "united-kingdom",
     gb: "united-kingdom",
-    usa: "united-states", // not served by MeteoAlarm; will 404 honestly
+    usa: "united-states",
     de: "germany",
     fr: "france",
     es: "spain",
@@ -2076,7 +2076,6 @@ async function handleFirmsHotspots(args) {
     });
   }
 
-  // csv (default)
   const hasBox = [args.west, args.south, args.east, args.north].every((v) => present(v));
   let west, south, east, north, radius_km = null;
   if (hasBox) {
@@ -2935,7 +2934,7 @@ const SOURCE_REGISTRY = [
   {
     id: "firms",
     label: "NASA FIRMS fire hotspots",
-    core: true, // registered always; key checked at runtime for csv/status/availability
+    core: true,
     confidence_tier: "overlay",
     tools: [
       {
