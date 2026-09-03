@@ -9,13 +9,13 @@ import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 
 const PROTOCOL_VERSION = "2024-11-05";
-const SERVER_INFO = { name: "weather-hazards", version: "0.1.3" };
+const SERVER_INFO = { name: "weather-hazards", version: "0.1.4" };
 const TIMEOUT_MS = 25_000;
-const UA = "WeatherHazardsPlugin/0.1.3 (contact: chucktastictime@gmail.com)";
+const UA = "WeatherHazardsPlugin/0.1.4 (contact: chucktastictime@gmail.com)";
 const NWS_UA = UA;
 /** CloudFront on metoc.navy.mil often 403s the generic plugin UA — JTWC fetches use a browser-like UA. */
 const JTWC_UA =
-  "Mozilla/5.0 (compatible; WeatherHazardsPlugin/0.1.3; +https://github.com/TheAbsentTourist/weather-web)";
+  "Mozilla/5.0 (compatible; WeatherHazardsPlugin/0.1.4; +https://github.com/TheAbsentTourist/weather-web)";
 const JTWC_RSS = "https://www.metoc.navy.mil/jtwc/rss/jtwc.rss";
 const JTWC_ABPW = "https://www.metoc.navy.mil/jtwc/products/abpwweb.txt";
 const JTWC_ABIO = "https://www.metoc.navy.mil/jtwc/products/abioweb.txt";
@@ -562,6 +562,21 @@ function xmlAttr(block, tag, attr) {
   return m ? decodeXml(m[1]) : null;
 }
 
+function xmlLinkHrefs(block, typeNeedle = null) {
+  const hrefs = [];
+  const re = /<link\b([^>]*)\/?>/gi;
+  let m;
+  while ((m = re.exec(String(block)))) {
+    const attrs = m[1];
+    const type = attrs.match(/\btype=["']([^"']+)["']/i)?.[1] || "";
+    const href = attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];
+    if (!href) continue;
+    if (typeNeedle && !String(type).toLowerCase().includes(String(typeNeedle).toLowerCase())) continue;
+    hrefs.push(decodeXml(href));
+  }
+  return hrefs;
+}
+
 function decodeXml(s) {
   return String(s)
     .replace(/&lt;/g, "<")
@@ -596,7 +611,7 @@ function meteoalarmCountrySlug(raw) {
     uk: "united-kingdom",
     "great-britain": "united-kingdom",
     gb: "united-kingdom",
-    usa: "united-states", // not served by MeteoAlarm; will 404 honestly
+    usa: "united-states",
     de: "germany",
     fr: "france",
     es: "spain",
@@ -615,6 +630,23 @@ function meteoalarmCountrySlug(raw) {
     gr: "greece",
     cz: "czech-republic",
     "czech-republic": "czech-republic",
+    lu: "luxembourg",
+    hu: "hungary",
+    ro: "romania",
+    sk: "slovakia",
+    si: "slovenia",
+    hr: "croatia",
+    bg: "bulgaria",
+    ee: "estonia",
+    lv: "latvia",
+    lt: "lithuania",
+    mt: "malta",
+    cy: "cyprus",
+    is: "iceland",
+    rs: "serbia",
+    ua: "ukraine",
+    tr: "turkiye",
+    turkey: "turkiye",
   };
   return aliases[s] || s;
 }
@@ -630,9 +662,12 @@ async function handleNwsForecast(args) {
     return errPayload("invalid_arguments", "lat and lon are required numbers");
   }
   const product = String(args.product || "periods").toLowerCase();
-  const allowed = ["periods", "hourly", "grid", "observation", "afd", "hwo"];
+  const allowed = ["periods", "hourly", "grid", "observation", "observations", "afd", "hwo"];
   if (!allowed.includes(product)) {
-    return errPayload("invalid_arguments", "product must be periods | hourly | grid | observation | afd | hwo");
+    return errPayload(
+      "invalid_arguments",
+      "product must be periods | hourly | grid | observation | observations | afd | hwo",
+    );
   }
   const pointsUrl = `https://api.weather.gov/points/${lat},${lon}`;
   const points = await httpGet(pointsUrl, { headers: nwsHeaders(), as: "json" });
@@ -700,7 +735,7 @@ async function handleNwsForecast(args) {
     });
   }
 
-  if (product === "observation") {
+  if (product === "observation" || product === "observations") {
     const stationsUrl = props.observationStations;
     if (!stationsUrl) {
       return errPayload("not_found", "NWS points response missing observationStations URL");
@@ -713,7 +748,53 @@ async function handleNwsForecast(args) {
         status: stations.status,
       });
     }
-    const obsUrl = `${String(stationHref).replace(/\/$/, "")}/observations/latest`;
+    const stationBase = String(stationHref).replace(/\/$/, "");
+    const wantHistory = product === "observations" || boolArg(args.history, false);
+    if (wantHistory) {
+      const histLimit = clamp(num(args.limit, 12), 1, 48);
+      const histParams = new URLSearchParams({ limit: String(histLimit) });
+      if (present(args.start)) histParams.set("start", String(args.start));
+      if (present(args.end)) histParams.set("end", String(args.end));
+      const histUrl = `${stationBase}/observations?${histParams}`;
+      const hist = await httpGet(histUrl, { headers: nwsHeaders(), as: "json" });
+      if (!hist.ok || !hist.json) {
+        return errPayload("http_error", `NWS observation history failed HTTP ${hist.status}`, {
+          status: hist.status,
+        });
+      }
+      const features = hist.json.features ?? [];
+      const observations = features.slice(0, histLimit).map((f) => {
+        const op = f.properties ?? {};
+        return {
+          timestamp: op.timestamp ?? null,
+          textDescription: op.textDescription ?? null,
+          temperature: qty(op.temperature),
+          dewpoint: qty(op.dewpoint),
+          windDirection: qty(op.windDirection),
+          windSpeed: qty(op.windSpeed),
+          windGust: qty(op.windGust),
+          barometricPressure: qty(op.barometricPressure),
+          visibility: qty(op.visibility),
+          relativeHumidity: qty(op.relativeHumidity),
+        };
+      });
+      return okPayload({
+        type: "ObservationList",
+        confidence_tier: "official",
+        source: "nws",
+        product: "observations",
+        lat,
+        lon,
+        place,
+        station: stationHref,
+        stationId: feat?.properties?.stationIdentifier ?? null,
+        stationName: feat?.properties?.name ?? null,
+        observationUrl: histUrl,
+        count: observations.length,
+        observations,
+      });
+    }
+    const obsUrl = `${stationBase}/observations/latest`;
     const obs = await httpGet(obsUrl, { headers: nwsHeaders(), as: "json" });
     if (!obs.ok || !obs.json?.properties) {
       return errPayload("http_error", `NWS observation failed HTTP ${obs.status}`, { status: obs.status });
@@ -825,6 +906,24 @@ async function handleNwsForecast(args) {
 }
 
 async function handleNwsAlerts(args) {
+  const mode = String(args.mode || "").toLowerCase();
+  if (mode === "types" || boolArg(args.list_types, false)) {
+    const url = "https://api.weather.gov/alerts/types";
+    const res = await httpGet(url, { headers: nwsHeaders(), as: "json" });
+    if (!res.ok || !res.json) {
+      return errPayload("http_error", `NWS alert types failed HTTP ${res.status}`, { status: res.status });
+    }
+    const eventTypes = res.json.eventTypes ?? res.json["@graph"] ?? res.json.types ?? [];
+    return okPayload({
+      type: "NwsAlertTypes",
+      confidence_tier: "official",
+      source: "nws",
+      mode: "types",
+      count: Array.isArray(eventTypes) ? eventTypes.length : 0,
+      eventTypes,
+      url,
+    });
+  }
   const lat = present(args.lat) ? num(args.lat) : null;
   const lon = present(args.lon) ? num(args.lon) : null;
   const area = present(args.area) ? String(args.area).toUpperCase() : null;
@@ -833,10 +932,11 @@ async function handleNwsAlerts(args) {
   const status = present(args.status) ? String(args.status).toLowerCase() : null;
   const severity = present(args.severity) ? String(args.severity) : null;
   const urgency = present(args.urgency) ? String(args.urgency) : null;
+  const certainty = present(args.certainty) ? String(args.certainty) : null;
   const region = present(args.region) ? String(args.region) : null;
   const params = new URLSearchParams();
   const hasPoint = lat != null && lon != null && Number.isFinite(lat) && Number.isFinite(lon);
-  const hasFilter = Boolean(area || zone || event || severity || urgency || region);
+  const hasFilter = Boolean(area || zone || event || severity || urgency || certainty || region);
   if (hasPoint) {
     params.set("point", `${lat},${lon}`);
   } else if (area) {
@@ -849,6 +949,7 @@ async function handleNwsAlerts(args) {
   if (status) params.set("status", status);
   if (severity) params.set("severity", severity);
   if (urgency) params.set("urgency", urgency);
+  if (certainty) params.set("certainty", certainty);
   if (region) params.set("region", region);
   const url = `https://api.weather.gov/alerts/active?${params}`;
   const res = await httpGet(url, { headers: nwsHeaders(), as: "json" });
@@ -883,10 +984,42 @@ async function handleNwsAlerts(args) {
     type: "OfficialAlertList",
     confidence_tier: "official",
     source: "nws",
-    query: { lat, lon, area, event, zone, status, severity, urgency, region, url },
+    query: { lat, lon, area, event, zone, status, severity, urgency, certainty, region, url },
     count: sliced.length,
     alerts: sliced,
   });
+}
+
+function usgsHasBbox(args) {
+  const south = args.minlatitude ?? args.south;
+  const north = args.maxlatitude ?? args.north;
+  const west = args.minlongitude ?? args.west;
+  const east = args.maxlongitude ?? args.east;
+  return [south, north, west, east].every((v) => present(v));
+}
+
+function applyUsgsFdsnParams(params, args) {
+  if (usgsHasBbox(args)) {
+    params.set("minlatitude", String(num(args.minlatitude ?? args.south)));
+    params.set("maxlatitude", String(num(args.maxlatitude ?? args.north)));
+    params.set("minlongitude", String(num(args.minlongitude ?? args.west)));
+    params.set("maxlongitude", String(num(args.maxlongitude ?? args.east)));
+  } else if (present(args.lat) && present(args.lon)) {
+    params.set("latitude", String(num(args.lat)));
+    params.set("longitude", String(num(args.lon)));
+    params.set("maxradiuskm", String(clamp(num(args.radius_km, 500), 1, 20000)));
+  }
+  if (present(args.minmagnitude) || present(args.minmag)) {
+    params.set("minmagnitude", String(num(args.minmagnitude, args.minmag)));
+  }
+  if (present(args.maxmagnitude) || present(args.maxmag)) {
+    params.set("maxmagnitude", String(num(args.maxmagnitude, args.maxmag)));
+  }
+  if (present(args.starttime)) params.set("starttime", String(args.starttime));
+  if (present(args.endtime)) params.set("endtime", String(args.endtime));
+  if (present(args.updatedafter)) params.set("updatedafter", String(args.updatedafter));
+  const types = args.types ?? args.eventtype ?? args.type;
+  if (present(types)) params.set("eventtype", String(types));
 }
 
 const USGS_FEEDS = {
@@ -925,15 +1058,7 @@ async function handleUsgsQuakes(args) {
     let url = `https://earthquake.usgs.gov/fdsnws/event/1/${meta}`;
     if (meta === "count") {
       const params = new URLSearchParams({ format: "geojson" });
-      if (present(args.lat) && present(args.lon)) {
-        params.set("latitude", String(num(args.lat)));
-        params.set("longitude", String(num(args.lon)));
-        params.set("maxradiuskm", String(clamp(num(args.radius_km, 500), 1, 20000)));
-      }
-      if (present(args.minmagnitude) || present(args.minmag)) {
-        params.set("minmagnitude", String(num(args.minmagnitude, args.minmag)));
-      }
-      if (present(args.starttime)) params.set("starttime", String(args.starttime));
+      applyUsgsFdsnParams(params, args);
       url = `${url}?${params}`;
     }
     const res = await httpGet(url, { accept: "application/json, application/xml, text/plain, */*", as: "json", timeout: 30_000 });
@@ -976,24 +1101,24 @@ async function handleUsgsQuakes(args) {
     });
   }
 
-  const mode = String(args.feed || args.mode || (present(args.lat) && present(args.lon) ? "query" : "hour")).toLowerCase();
+  const hasBbox = usgsHasBbox(args);
+  const mode = String(
+    args.feed || args.mode || (hasBbox || (present(args.lat) && present(args.lon)) ? "query" : "hour"),
+  ).toLowerCase();
   let url;
   if (mode === "query") {
-    const lat = num(args.lat, DEFAULT_LAT);
-    const lon = num(args.lon, DEFAULT_LON);
-    const radius = clamp(num(args.radius_km, 500), 1, 20000);
-    const minmag = num(args.minmagnitude, args.minmag ?? 0);
     const limit = clamp(num(args.limit, 50), 1, 200);
     const params = new URLSearchParams({
       format: "geojson",
-      latitude: String(lat),
-      longitude: String(lon),
-      maxradiuskm: String(radius),
       orderby: "time",
       limit: String(limit),
     });
-    if (minmag > 0) params.set("minmagnitude", String(minmag));
-    if (present(args.starttime)) params.set("starttime", String(args.starttime));
+    applyUsgsFdsnParams(params, args);
+    if (!params.has("minlatitude") && !params.has("latitude")) {
+      params.set("latitude", String(DEFAULT_LAT));
+      params.set("longitude", String(DEFAULT_LON));
+      params.set("maxradiuskm", String(clamp(num(args.radius_km, 500), 1, 20000)));
+    }
     url = `https://earthquake.usgs.gov/fdsnws/event/1/query?${params}`;
   } else if (USGS_FEEDS[mode]) {
     url = `https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/${USGS_FEEDS[mode]}.geojson`;
@@ -1093,11 +1218,27 @@ async function handleNhcStorms(args) {
 // JTWC (WP / IO / SH only — sibling to nhc_storms, not folded into NHC)
 // ---------------------------------------------------------------------------
 
+function jtwcItemText(itemXml) {
+  const title = xmlText(itemXml, "title") || "";
+  const desc = xmlText(itemXml, "description") || "";
+  const link = xmlText(itemXml, "link") || xmlAttr(itemXml, "link", "href") || "";
+  const guid = xmlText(itemXml, "guid") || "";
+  return { title, desc, link, guid, blob: `${title}\n${desc}\n${link}\n${guid}\n${itemXml}` };
+}
+
 function jtwcItemIsEpacCpac(itemXml) {
-  const title = (xmlText(itemXml, "title") || "").toLowerCase();
+  const { title, blob } = jtwcItemText(itemXml);
   const category = (xmlText(itemXml, "category") || "").toLowerCase();
-  const blob = `${title} ${category}`;
-  return /central\/eastern pacific|eastern pacific|central pacific|\bepac\b|\bcpac\b/.test(blob);
+  const hay = `${title} ${category} ${blob}`.toLowerCase();
+  return /central\/eastern pacific|eastern pacific|central pacific|\bepac\b|\bcpac\b/.test(hay);
+}
+
+function jtwcItemIsAdvisory(itemXml) {
+  const { title, desc, blob } = jtwcItemText(itemXml);
+  if (/abpwweb\.txt|abioweb\.txt/i.test(blob)) return true;
+  if (/\/jtwc\/products\/ab[pi]o/i.test(blob)) return true;
+  if (/significant tropical weather advisory|\bstwa\b/i.test(`${title} ${desc}`)) return true;
+  return false;
 }
 
 /** Extract wp|io|sh web.txt (+ optional .tcw) from RSS item HTML CDATA. */
@@ -1123,27 +1264,62 @@ function extractJtwcProductLinks(html) {
   return [...storms.values()];
 }
 
-function extractJtwcAdvisoryLinks(html) {
+function extractJtwcAdvisoryLinks(blob) {
   const out = [];
   const seen = new Set();
-  const hrefRe = /href\s*=\s*['"]([^'"]+)['"]/gi;
-  let m;
-  while ((m = hrefRe.exec(String(html)))) {
-    const url = m[1];
+  const add = (url) => {
     let basin = null;
     let title = null;
-    if (/\/products\/abpwweb\.txt/i.test(url)) {
+    if (/abpwweb\.txt/i.test(url)) {
       basin = "WP";
       title = "ABPW";
-    } else if (/\/products\/abioweb\.txt/i.test(url)) {
+    } else if (/abioweb\.txt/i.test(url)) {
       basin = "IO";
       title = "ABIO";
     }
-    if (!basin || seen.has(basin)) continue;
+    if (!basin || seen.has(basin)) return;
     seen.add(basin);
     out.push({ basin, url, title });
-  }
+  };
+  const hrefRe = /href\s*=\s*['"]([^'"]+)['"]/gi;
+  let m;
+  while ((m = hrefRe.exec(String(blob)))) add(m[1]);
+  const bareRe = /https?:\/\/[^\s"'<>]+(?:abpwweb|abioweb)\.txt/gi;
+  while ((m = bareRe.exec(String(blob)))) add(m[0]);
   return out;
+}
+
+function parseJtwcTcw(text, meta = {}) {
+  const raw = String(text || "");
+  const lines = raw.split(/\r?\n/);
+  const positions = [];
+  for (const line of lines) {
+    const pos = parseJtwcLatLon(line);
+    if (pos.lat == null || pos.lon == null) continue;
+    const wind = line.match(/(\d{2,3})\s*KT/i) || line.match(/\b(\d{2,3})\s+(\d{3,4})\s*$/);
+    const press = line.match(/(\d{3,4})\s*MB/i);
+    const time = line.match(/\b(\d{6,8}Z|\d{4}\s*Z|\d{10})\b/i)?.[1] || null;
+    positions.push({
+      time,
+      lat: pos.lat,
+      lon: pos.lon,
+      intensity_kt: wind ? Number(wind[1]) : null,
+      pressure_mb: press ? Number(press[1]) : null,
+    });
+    if (positions.length >= 8) break;
+  }
+  const name =
+    raw.match(/SUBJ\/([^/\n]+)/i)?.[1]?.trim() ||
+    raw.match(/\b((?:SUPER\s+)?(?:TYPHOON|HURRICANE|TROPICAL\s+STORM|TROPICAL\s+DEPRESSION|TROPICAL\s+CYCLONE)\s+[A-Z0-9 ()-]+)/i)?.[1] ||
+    meta.id ||
+    null;
+  return {
+    url: meta.tcwUrl || null,
+    name,
+    position_count: positions.length,
+    positions,
+    preview: raw.replace(/\s+/g, " ").trim().slice(0, 400),
+  };
 }
 
 /** Parse ABPW/ABIO TROPICAL DISTURBANCE SUMMARY INVESTs only (not named TCs). */
@@ -1287,6 +1463,7 @@ function parseJtwcWebTxt(text, meta = {}) {
 async function handleJtwcStorms(args) {
   const includeAdvisories = boolArg(args.include_advisories, false);
   const includeInvests = boolArg(args.include_invests, false);
+  const includeTcw = boolArg(args.include_tcw, false);
   const rss = await httpGet(JTWC_RSS, {
     accept: "application/rss+xml, application/xml, text/xml, */*",
     headers: { "User-Agent": JTWC_UA },
@@ -1303,21 +1480,19 @@ async function handleJtwcStorms(args) {
   const advisoryFeeds = new Map();
   for (const item of items) {
     if (jtwcItemIsEpacCpac(item)) continue;
-    const title = (xmlText(item, "title") || "").toLowerCase();
-    const html = xmlText(item, "description") || "";
+    const { title, blob } = jtwcItemText(item);
     const pubDate = xmlText(item, "pubDate");
-    const isStwa = /significant tropical weather advisory/.test(title);
-    if (isStwa) {
+    if (jtwcItemIsAdvisory(item)) {
       if (includeAdvisories || includeInvests) {
-        for (const a of extractJtwcAdvisoryLinks(html)) {
+        for (const a of extractJtwcAdvisoryLinks(blob)) {
           if (!advisoryFeeds.has(a.basin)) {
-            advisoryFeeds.set(a.basin, { ...a, pubDate, rssTitle: xmlText(item, "title") });
+            advisoryFeeds.set(a.basin, { ...a, pubDate, rssTitle: title });
           }
         }
       }
       continue;
     }
-    for (const p of extractJtwcProductLinks(html)) {
+    for (const p of extractJtwcProductLinks(blob)) {
       if (!products.has(p.id)) products.set(p.id, { ...p, pubDate });
     }
   }
@@ -1356,10 +1531,21 @@ async function handleJtwcStorms(args) {
         publicAdvisoryUrl: p.webTxtUrl,
         forecastAdvisoryUrl: p.tcwUrl,
         fetch_error: `HTTP ${res.status}`,
+        ...(includeTcw && p.tcwUrl ? { tcw: { url: p.tcwUrl, error: "web.txt fetch failed" } } : {}),
       });
       continue;
     }
-    storms.push(parseJtwcWebTxt(res.text, p));
+    const storm = parseJtwcWebTxt(res.text, p);
+    if (includeTcw && p.tcwUrl) {
+      const tcwRes = await httpGet(p.tcwUrl, {
+        accept: "text/plain, */*",
+        headers: { "User-Agent": JTWC_UA },
+      });
+      storm.tcw = tcwRes.ok
+        ? parseJtwcTcw(tcwRes.text, p)
+        : { url: p.tcwUrl, error: `HTTP ${tcwRes.status}` };
+    }
+    storms.push(storm);
   }
 
   const payload = {
@@ -1479,6 +1665,8 @@ async function handleSwpcSnapshot(args) {
   const includeIcao = boolArg(args.include_icao, false);
   const includeEvents = boolArg(args.include_events, false);
   const includeXrays = boolArg(args.include_xrays, false);
+  const includeKp3h = boolArg(args.include_kp_3h, false);
+  const includeFlux = boolArg(args.include_flux, false);
   const fetches = [
     httpGet("https://services.swpc.noaa.gov/products/noaa-scales.json", {
       accept: "application/json",
@@ -1541,6 +1729,22 @@ async function handleSwpcSnapshot(args) {
       }),
     );
   }
+  if (includeKp3h) {
+    fetches.push(
+      httpGet("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json", {
+        accept: "application/json",
+        as: "json",
+      }),
+    );
+  }
+  if (includeFlux) {
+    fetches.push(
+      httpGet("https://services.swpc.noaa.gov/json/solar-radio-flux.json", {
+        accept: "application/json",
+        as: "json",
+      }),
+    );
+  }
   const results = await Promise.all(fetches);
   const scalesRes = results[0];
   const alertsRes = results[1];
@@ -1552,6 +1756,8 @@ async function handleSwpcSnapshot(args) {
   const icaoRes = includeIcao ? results[idx++] : null;
   const eventsRes = includeEvents ? results[idx++] : null;
   const xraysRes = includeXrays ? results[idx++] : null;
+  const kp3hRes = includeKp3h ? results[idx++] : null;
+  const fluxSummaryRes = includeFlux ? results[idx++] : null;
 
   if (!scalesRes.ok || !scalesRes.json) {
     return errPayload("http_error", `SWPC scales failed HTTP ${scalesRes.status}`, {
@@ -1610,6 +1816,43 @@ async function handleSwpcSnapshot(args) {
   if (includeXrays) {
     snap.xrays = xraysRes?.ok ? summarizeGoesXrays(xraysRes.json) : { error: `HTTP ${xraysRes?.status}` };
   }
+  if (includeKp3h) {
+    if (!kp3hRes?.ok || !Array.isArray(kp3hRes.json)) {
+      snap.kp_3h = { error: `HTTP ${kp3hRes?.status}` };
+    } else {
+      const rows = kp3hRes.json.filter((r) => r && r.time_tag);
+      const latest = rows.length ? rows[rows.length - 1] : null;
+      snap.kp_3h = {
+        latest: latest
+          ? {
+              time_tag: latest.time_tag ?? null,
+              Kp: latest.Kp ?? latest.kp ?? null,
+              a_running: latest.a_running ?? null,
+              station_count: latest.station_count ?? null,
+            }
+          : null,
+        recent: rows.slice(-8).map((r) => ({
+          time_tag: r.time_tag ?? null,
+          Kp: r.Kp ?? r.kp ?? null,
+        })),
+        sample_count: rows.length,
+        note: "Official NOAA 3-hour planetary Kp (noaa-planetary-k-index.json).",
+      };
+    }
+  }
+  if (includeFlux) {
+    if (!fluxSummaryRes?.ok) {
+      snap.flux_summary = { error: `HTTP ${fluxSummaryRes?.status}` };
+    } else {
+      const arr = Array.isArray(fluxSummaryRes.json) ? fluxSummaryRes.json : [];
+      const last = arr.length ? arr[arr.length - 1] : null;
+      snap.flux_summary = {
+        latest: last,
+        sample_count: arr.length,
+        note: "SWPC solar-radio-flux.json latest sample, not the full series.",
+      };
+    }
+  }
   return okPayload(snap);
 }
 
@@ -1635,13 +1878,20 @@ async function handleMeteoalarm(args) {
   if (!res.ok) {
     return errPayload("http_error", `MeteoAlarm failed HTTP ${res.status}`, { status: res.status, url });
   }
+  const wantCap =
+    String(args.format || "").toLowerCase() === "cap" ||
+    String(args.type || "").toLowerCase() === "application/cap+xml";
   const entries = atomEntries(res.text);
-  const alerts = entries.map((entry) => {
+  const alerts = [];
+  const capLimit = wantCap ? clamp(num(args.limit, 5), 1, 10) : clamp(num(args.limit, 50), 1, 200);
+  for (const entry of entries) {
+    if (alerts.length >= capLimit) break;
     const title = xmlText(entry, "title");
     const summary = xmlText(entry, "summary") || xmlText(entry, "content");
     const id = xmlText(entry, "id");
     const updated = xmlText(entry, "updated") || xmlText(entry, "published");
     const link = xmlAttr(entry, "link", "href");
+    const capHref = xmlLinkHrefs(entry, "application/cap+xml")[0] || null;
     const severity = xmlText(entry, "cap:severity") || xmlText(entry, "severity");
     const urgency = xmlText(entry, "cap:urgency") || xmlText(entry, "urgency");
     const certainty = xmlText(entry, "cap:certainty") || xmlText(entry, "certainty");
@@ -1649,42 +1899,72 @@ async function handleMeteoalarm(args) {
     const areaDesc = xmlText(entry, "cap:areaDesc") || xmlText(entry, "areaDesc");
     const onset = xmlText(entry, "cap:onset") || xmlText(entry, "onset") || xmlText(entry, "effective");
     const ends = xmlText(entry, "cap:expires") || xmlText(entry, "expires");
-    return toOfficialAlert({
-      id,
-      event,
-      headline: title,
-      severity,
-      urgency,
-      certainty,
-      areaDesc,
-      onset,
-      ends,
-      sent: updated,
-      description: summary,
-      instruction: null,
-      url: link,
-      source: "meteoalarm",
-      confidence_tier: "official",
-      extra: { country },
-    });
-  });
-  const limit = clamp(num(args.limit, 50), 1, 200);
-  const sliced = alerts.slice(0, limit);
+    let extra = { country };
+    let desc = summary;
+    let ev = event;
+    let sev = severity;
+    let urg = urgency;
+    let cert = certainty;
+    let area = areaDesc;
+    let on = onset;
+    let en = ends;
+    let headline = title;
+    let alertUrl = capHref || link;
+    if (wantCap && capHref) {
+      const capRes = await httpGet(capHref, { accept: "application/cap+xml, application/xml, */*" });
+      if (capRes.ok) {
+        const info = (capRes.text.match(/<info\b[\s\S]*?<\/info>/i) || [capRes.text])[0];
+        ev = xmlText(info, "event") || ev;
+        headline = xmlText(info, "headline") || headline;
+        sev = xmlText(info, "severity") || sev;
+        urg = xmlText(info, "urgency") || urg;
+        cert = xmlText(info, "certainty") || cert;
+        area = xmlText(info, "areaDesc") || area;
+        on = xmlText(info, "onset") || xmlText(info, "effective") || on;
+        en = xmlText(info, "expires") || en;
+        desc = xmlText(info, "description") || desc;
+        extra = { ...extra, format: "cap", cap_url: capHref };
+      } else {
+        extra = { ...extra, format: "cap", cap_url: capHref, cap_error: `HTTP ${capRes.status}` };
+      }
+    }
+    alerts.push(
+      toOfficialAlert({
+        id,
+        event: ev,
+        headline,
+        severity: sev,
+        urgency: urg,
+        certainty: cert,
+        areaDesc: area,
+        onset: on,
+        ends: en,
+        sent: updated,
+        description: desc,
+        instruction: null,
+        url: alertUrl,
+        source: "meteoalarm",
+        confidence_tier: "official",
+        extra,
+      }),
+    );
+  }
   return okPayload({
     type: "OfficialAlertList",
     confidence_tier: "official",
     source: "meteoalarm",
     country,
-    count: sliced.length,
-    total_entries: alerts.length,
-    alerts: sliced,
+    format: wantCap ? "cap" : "atom",
+    count: alerts.length,
+    total_entries: entries.length,
+    alerts,
   });
 }
 
 async function handleFirmsHotspots(args) {
-  const mode = String(args.mode || "csv").toLowerCase();
-  if (!["csv", "kml", "status", "availability"].includes(mode)) {
-    return errPayload("invalid_arguments", "mode must be csv | kml | status | availability");
+  const mode = String(args.mode || args.format || "csv").toLowerCase();
+  if (!["csv", "kml", "status", "availability", "missing_data"].includes(mode)) {
+    return errPayload("invalid_arguments", "mode must be csv | kml | status | availability | missing_data");
   }
 
   if (mode === "kml") {
@@ -1725,6 +2005,31 @@ async function handleFirmsHotspots(args) {
   const keyed = requireFirmsKey();
   if (keyed.error) return keyed.error;
   const key = keyed.key;
+
+  if (mode === "missing_data") {
+    const url = `https://firms.modaps.eosdis.nasa.gov/api/missing_data/${encodeURIComponent(key)}`;
+    const res = await httpGet(url, { accept: "text/csv, text/plain" });
+    if (!res.ok) {
+      return errPayload("http_error", `FIRMS missing_data failed HTTP ${res.status}`, {
+        status: res.status,
+        detail: res.text?.slice(0, 300),
+      });
+    }
+    if (/invalid map_key/i.test(res.text)) {
+      return errPayload("config_error", "FIRMS rejected MAP_KEY (Invalid MAP_KEY).", {
+        detail: res.text.slice(0, 200),
+      });
+    }
+    const rows = parseCsv(res.text);
+    return okPayload({
+      type: "FirmsMissingData",
+      confidence_tier: "overlay",
+      source: "firms",
+      mode: "missing_data",
+      count: rows.length,
+      rows: rows.slice(0, 200),
+    });
+  }
 
   if (mode === "status") {
     const url = `https://firms.modaps.eosdis.nasa.gov/mapserver/mapkey_status/?MAP_KEY=${encodeURIComponent(key)}`;
@@ -1771,7 +2076,6 @@ async function handleFirmsHotspots(args) {
     });
   }
 
-  // csv (default)
   const hasBox = [args.west, args.south, args.east, args.north].every((v) => present(v));
   let west, south, east, north, radius_km = null;
   if (hasBox) {
@@ -1828,6 +2132,61 @@ async function handleFirmsHotspots(args) {
 }
 
 async function handleEonet(args) {
+  const mode = String(args.mode || "").toLowerCase();
+  if (mode === "categories") {
+    const url = "https://eonet.gsfc.nasa.gov/api/v3/categories";
+    const res = await httpGet(url, { accept: "application/json", as: "json" });
+    if (!res.ok || !res.json) {
+      return errPayload("http_error", `EONET categories failed HTTP ${res.status}`, { status: res.status });
+    }
+    const categories = (res.json.categories ?? []).filter((c) => !eonetIsQuake([c]));
+    return okPayload({
+      type: "NaturalEventList",
+      confidence_tier: "catalog",
+      source: "eonet",
+      mode: "categories",
+      count: categories.length,
+      categories: categories.map((c) => ({ id: c.id ?? null, title: c.title ?? null })),
+    });
+  }
+  if (mode === "sources") {
+    const url = "https://eonet.gsfc.nasa.gov/api/v3/sources";
+    const res = await httpGet(url, { accept: "application/json", as: "json" });
+    if (!res.ok || !res.json) {
+      return errPayload("http_error", `EONET sources failed HTTP ${res.status}`, { status: res.status });
+    }
+    const sources = res.json.sources ?? [];
+    return okPayload({
+      type: "NaturalEventList",
+      confidence_tier: "catalog",
+      source: "eonet",
+      mode: "sources",
+      count: sources.length,
+      sources: sources.map((s) => ({ id: s.id ?? null, title: s.title ?? null, source: s.source ?? null })),
+    });
+  }
+  if (present(args.id) || present(args.eventid)) {
+    const id = String(args.id ?? args.eventid).trim();
+    const url = `https://eonet.gsfc.nasa.gov/api/v3/events/${encodeURIComponent(id)}`;
+    const res = await httpGet(url, { accept: "application/json", as: "json" });
+    if (!res.ok || !res.json) {
+      return errPayload("http_error", `EONET event ${id} failed HTTP ${res.status}`, { status: res.status });
+    }
+    const ev = res.json;
+    if (eonetIsQuake(ev.categories)) {
+      return errPayload("invalid_arguments", "EONET earthquakes are excluded; use usgs_quakes instead.");
+    }
+    const events = [toNaturalEvent(ev)];
+    return okPayload({
+      type: "NaturalEventList",
+      confidence_tier: "catalog",
+      source: "eonet",
+      mode: "id",
+      eventid: id,
+      count: events.length,
+      events,
+    });
+  }
   const limit = clamp(num(args.limit, 20), 1, 100);
   const status = String(args.status || "open");
   const format = String(args.format || "json").toLowerCase();
@@ -1835,7 +2194,7 @@ async function handleEonet(args) {
     return errPayload("invalid_arguments", "format must be json | geojson");
   }
   const params = new URLSearchParams({ limit: String(limit), status });
-  const category = present(args.category) ? String(args.category) : null;
+  const category = present(args.category) ? String(args.category) : present(args.categories) ? String(args.categories) : null;
   if (category && /earthquake/i.test(category)) {
     return errPayload(
       "invalid_arguments",
@@ -1843,6 +2202,14 @@ async function handleEonet(args) {
     );
   }
   if (category) params.set("category", category);
+  if (present(args.source) || present(args.sources)) {
+    params.set("source", String(args.source ?? args.sources));
+  }
+  if (present(args.days)) params.set("days", String(clamp(num(args.days, 30), 1, 365)));
+  if (present(args.bbox)) params.set("bbox", String(args.bbox));
+  else if ([args.west, args.north, args.east, args.south].every((v) => present(v))) {
+    params.set("bbox", `${num(args.west)},${num(args.north)},${num(args.east)},${num(args.south)}`);
+  }
   const path = format === "geojson" ? "/events/geojson" : "/events";
   const url = `https://eonet.gsfc.nasa.gov/api/v3${path}?${params}`;
   const res = await httpGet(url, { accept: "application/json", as: "json" });
@@ -1952,6 +2319,13 @@ async function handleGdacs(args) {
   const to = args.toDate ?? args.todate ?? args.todatetime;
   if (present(from)) params.set("fromDate", String(from));
   if (present(to)) params.set("toDate", String(to));
+  if (present(args.eventlist)) params.set("eventlist", String(args.eventlist));
+  if (present(args.pagenumber) || present(args.page)) {
+    params.set("pagenumber", String(clamp(num(args.pagenumber, args.page ?? 1), 1, 50)));
+  }
+  if (present(args.pagesize)) {
+    params.set("pagesize", String(clamp(num(args.pagesize, 20), 1, 100)));
+  }
   const url = `https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?${params}`;
   const res = await httpGet(url, { accept: "application/json", as: "json", timeout: 90_000 });
   if (!res.ok) {
@@ -2023,7 +2397,7 @@ async function handleGvpWeekly(args) {
         const c = f.geometry?.coordinates ?? [];
         return {
           type: "Volcano",
-          confidence_tier: "specialist",
+          confidence_tier: "catalog",
           source: "gvp",
           id: p.Volcano_Number ?? f.id ?? null,
           name: p.Volcano_Name ?? null,
@@ -2039,7 +2413,7 @@ async function handleGvpWeekly(args) {
       });
     return okPayload({
       type: "VolcanoList",
-      confidence_tier: "specialist",
+      confidence_tier: "catalog",
       source: "gvp",
       mode: "lookup",
       count: volcanoes.length,
@@ -2075,14 +2449,17 @@ async function handleGvpWeekly(args) {
         confidence_tier: "specialist",
       }),
     );
+    const limit = clamp(num(args.limit, args.maxFeatures ?? (alerts.length || 50)), 1, 200);
+    const sliced = alerts.slice(0, limit);
     return okPayload({
       type: "OfficialAlertList",
       confidence_tier: "specialist",
       source: "gvp",
       mode: "weekly",
       format: "rss",
-      count: alerts.length,
-      alerts,
+      count: sliced.length,
+      total: alerts.length,
+      alerts: sliced,
     });
   }
   const infoBlocks = [];
@@ -2114,14 +2491,17 @@ async function handleGvpWeekly(args) {
       confidence_tier: "specialist",
     }),
   );
+  const limit = clamp(num(args.limit, args.maxFeatures ?? (alerts.length || 50)), 1, 200);
+  const sliced = alerts.slice(0, limit);
   return okPayload({
     type: "OfficialAlertList",
     confidence_tier: "specialist",
     source: "gvp",
     mode: "weekly",
     format: "cap",
-    count: alerts.length,
-    alerts,
+    count: sliced.length,
+    total: alerts.length,
+    alerts: sliced,
   });
 }
 
@@ -2142,8 +2522,110 @@ async function handleOpenMeteo(args) {
     lon = hit.longitude;
     place = [hit.name, hit.admin1, hit.country].filter(Boolean).join(", ");
   }
-  const days = clamp(num(args.forecast_days, 3), 1, 16);
+  const mode = String(args.mode || "forecast").toLowerCase();
+  if (!["forecast", "air_quality", "flood"].includes(mode)) {
+    return errPayload("invalid_arguments", "mode must be forecast | air_quality | flood");
+  }
+  const days = clamp(num(args.forecast_days, mode === "flood" ? 7 : 3), 1, mode === "flood" ? 92 : 16);
   const wantHourly = boolArg(args.hourly, false);
+
+  if (mode === "air_quality") {
+    let aqUrl =
+      `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}` +
+      `&current=european_aqi,us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,uv_index` +
+      `&timezone=auto&forecast_days=${clamp(days, 1, 7)}`;
+    if (wantHourly) {
+      aqUrl += `&hourly=pm10,pm2_5,european_aqi,us_aqi,ozone,nitrogen_dioxide`;
+    }
+    const aq = await httpGet(aqUrl, { accept: "application/json", as: "json" });
+    if (!aq.ok || !aq.json) {
+      return errPayload("http_error", `Open-Meteo air quality failed HTTP ${aq.status}`, { status: aq.status });
+    }
+    const extra = {
+      note: "Open-Meteo air-quality overlay (CAMS). Not an official national alert. See TERMS.md.",
+      mode: "air_quality",
+      current: aq.json.current ?? null,
+    };
+    if (wantHourly && aq.json.hourly) {
+      const h = aq.json.hourly;
+      const ht = h.time ?? [];
+      extra.hourly = ht.slice(0, clamp(days * 24, 1, 72)).map((t, i) => ({
+        time: t,
+        pm10: h.pm10?.[i] ?? null,
+        pm2_5: h.pm2_5?.[i] ?? null,
+        european_aqi: h.european_aqi?.[i] ?? null,
+        us_aqi: h.us_aqi?.[i] ?? null,
+        ozone: h.ozone?.[i] ?? null,
+        nitrogen_dioxide: h.nitrogen_dioxide?.[i] ?? null,
+      }));
+    }
+    return okPayload(
+      toPointForecast({
+        lat: aq.json.latitude ?? lat,
+        lon: aq.json.longitude ?? lon,
+        place,
+        timezone: aq.json.timezone ?? null,
+        periods: [],
+        source: "open-meteo",
+        confidence_tier: "overlay",
+        extra,
+      }),
+    );
+  }
+
+  if (mode === "flood") {
+    const flUrl =
+      `https://flood-api.open-meteo.com/v1/flood?latitude=${lat}&longitude=${lon}` +
+      `&daily=river_discharge,river_discharge_mean,river_discharge_max,river_discharge_min` +
+      `&forecast_days=${days}`;
+    const fl = await httpGet(flUrl, { accept: "application/json", as: "json" });
+    if (!fl.ok || !fl.json) {
+      return errPayload("http_error", `Open-Meteo flood failed HTTP ${fl.status}`, { status: fl.status });
+    }
+    const d = fl.json.daily ?? {};
+    const times = d.time ?? [];
+    const periods = times.slice(0, days).map((t, i) =>
+      toForecastPeriod({
+        number: i + 1,
+        name: t,
+        startTime: t,
+        endTime: t,
+        isDaytime: true,
+        temperature: null,
+        temperatureUnit: null,
+        probabilityOfPrecipitation: null,
+        windSpeed: null,
+        windDirection: null,
+        shortForecast:
+          d.river_discharge?.[i] != null ? `river_discharge ${d.river_discharge[i]}` : null,
+        detailedForecast:
+          d.river_discharge_max?.[i] != null ? `max ${d.river_discharge_max[i]}` : null,
+      }),
+    );
+    return okPayload(
+      toPointForecast({
+        lat: fl.json.latitude ?? lat,
+        lon: fl.json.longitude ?? lon,
+        place,
+        timezone: fl.json.timezone ?? null,
+        periods,
+        source: "open-meteo",
+        confidence_tier: "overlay",
+        extra: {
+          note: "Open-Meteo flood overlay (GloFAS river discharge). Not an official flood warning. See TERMS.md.",
+          mode: "flood",
+          daily: {
+            time: times.slice(0, days),
+            river_discharge: (d.river_discharge ?? []).slice(0, days),
+            river_discharge_mean: (d.river_discharge_mean ?? []).slice(0, days),
+            river_discharge_max: (d.river_discharge_max ?? []).slice(0, days),
+            river_discharge_min: (d.river_discharge_min ?? []).slice(0, days),
+          },
+        },
+      }),
+    );
+  }
+
   let url =
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
     `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max` +
@@ -2176,6 +2658,7 @@ async function handleOpenMeteo(args) {
   );
   const extra = {
     note: "Open-Meteo free non-commercial tier. Not an official national forecast. See TERMS.md.",
+    mode: "forecast",
     elevation: res.json.elevation ?? null,
     current: res.json.current ?? null,
   };
@@ -2225,7 +2708,7 @@ const SOURCE_REGISTRY = [
       {
         name: "nws_forecast",
         description:
-          "NWS point forecast via /points then product URL. product=periods (default) | hourly | grid | observation | afd | hwo. periods/hourly → PointForecast; grid → slim GridpointForecast; observation → latest station Observation; afd/hwo → latest NwsTextProduct using CWA as location= (e.g. EWX for Austin; not Kxxx). confidence_tier=official. Default point Austin TX 30.2672,-97.7431.",
+          "NWS point forecast via /points then product URL. product=periods (default) | hourly | grid | observation | observations | afd | hwo. periods/hourly → PointForecast; grid → slim GridpointForecast; observation → latest station Observation; observations or history=true → station observation history; afd/hwo → latest NwsTextProduct using CWA as location= (e.g. EWX for Austin; not Kxxx). confidence_tier=official. Default point Austin TX 30.2672,-97.7431.",
         inputSchema: {
           type: "object",
           properties: {
@@ -2233,10 +2716,16 @@ const SOURCE_REGISTRY = [
             lon: { type: "number", description: "Longitude (default -97.7431)" },
             product: {
               type: "string",
-              enum: ["periods", "hourly", "grid", "observation", "afd", "hwo"],
-              description: "periods (default) | hourly | grid | observation | afd | hwo",
+              enum: ["periods", "hourly", "grid", "observation", "observations", "afd", "hwo"],
+              description: "periods (default) | hourly | grid | observation | observations | afd | hwo",
             },
-            limit: { type: "number", description: "Max periods/hourly hours/grid values (defaults: 14/24/12)" },
+            history: {
+              type: "boolean",
+              description: "With product=observation, fetch station /observations history instead of latest (default false)",
+            },
+            start: { type: "string", description: "Observation history start (ISO)" },
+            end: { type: "string", description: "Observation history end (ISO)" },
+            limit: { type: "number", description: "Max periods/hourly hours/grid values/history rows (defaults: 14/24/12)" },
           },
         },
         run: handleNwsForecast,
@@ -2244,19 +2733,22 @@ const SOURCE_REGISTRY = [
       {
         name: "nws_alerts",
         description:
-          "NWS active alerts for a point (lat/lon), state area code, and/or zone. Optional event, status, severity, urgency, region query params on /alerts/active. Filters without lat/lon skip the default point. Returns OfficialAlert[] with confidence_tier=official.",
+          "NWS active alerts for a point (lat/lon), state area code, and/or zone. Optional event, status, severity, urgency, certainty, region query params on /alerts/active. mode=types or list_types=true lists /alerts/types. Filters without lat/lon skip the default point. Returns OfficialAlert[] with confidence_tier=official.",
         inputSchema: {
           type: "object",
           properties: {
             lat: { type: "number" },
             lon: { type: "number" },
-            area: { type: "string", description: "US state/territory code, e.g. VA" },
+            area: { type: "string", description: "US state/territory code, e.g. TX" },
             event: { type: "string", description: "NWS event name, e.g. Tornado Warning" },
-            zone: { type: "string", description: "UGC zone id, e.g. VAZ014" },
+            zone: { type: "string", description: "UGC zone id, e.g. TXZ192" },
             status: { type: "string", description: "actual | exercise | system | test | draft" },
             severity: { type: "string", description: "NWS severity, e.g. Extreme,Severe" },
             urgency: { type: "string", description: "NWS urgency, e.g. Immediate,Expected" },
+            certainty: { type: "string", description: "NWS certainty, e.g. Observed,Likely" },
             region: { type: "string", description: "NWS region (e.g. AL, AT, GL, …)" },
+            mode: { type: "string", description: "types lists /alerts/types (default active alerts)" },
+            list_types: { type: "boolean", description: "Alias for mode=types (default false)" },
             limit: { type: "number", description: "Max alerts to return (default all, max 500)" },
           },
         },
@@ -2273,7 +2765,7 @@ const SOURCE_REGISTRY = [
       {
         name: "usgs_quakes",
         description:
-          "USGS earthquakes. feed=hour|day|week|month|significant_*|4.5_*|2.5_*|1.0_*|query; eventid for detail/{id}.geojson; meta=count|catalogs|contributors via FDSN. QuakeEvent includes PAGER alert/mmi/cdi/felt. confidence_tier=catalog.",
+          "USGS earthquakes. feed=hour|day|week|month|significant_*|4.5_*|2.5_*|1.0_*|query; eventid for detail/{id}.geojson; meta=count|catalogs|contributors via FDSN. Query extras: endtime, maxmagnitude, updatedafter, bbox, types/eventtype. QuakeEvent includes PAGER alert/mmi/cdi/felt. confidence_tier=catalog.",
         inputSchema: {
           type: "object",
           properties: {
@@ -2288,8 +2780,21 @@ const SOURCE_REGISTRY = [
             lon: { type: "number" },
             radius_km: { type: "number", description: "FDSN maxradiuskm (default 500)" },
             minmagnitude: { type: "number" },
+            maxmagnitude: { type: "number", description: "FDSN maxmagnitude" },
             limit: { type: "number" },
             starttime: { type: "string", description: "FDSN starttime ISO date" },
+            endtime: { type: "string", description: "FDSN endtime ISO date" },
+            updatedafter: { type: "string", description: "FDSN updatedafter ISO date" },
+            minlatitude: { type: "number", description: "FDSN bbox south" },
+            maxlatitude: { type: "number", description: "FDSN bbox north" },
+            minlongitude: { type: "number", description: "FDSN bbox west" },
+            maxlongitude: { type: "number", description: "FDSN bbox east" },
+            west: { type: "number", description: "Bbox alias of minlongitude" },
+            south: { type: "number", description: "Bbox alias of minlatitude" },
+            east: { type: "number", description: "Bbox alias of maxlongitude" },
+            north: { type: "number", description: "Bbox alias of maxlatitude" },
+            types: { type: "string", description: "FDSN eventtype (e.g. earthquake)" },
+            eventtype: { type: "string", description: "Alias of types" },
           },
         },
         run: handleUsgsQuakes,
@@ -2332,7 +2837,7 @@ const SOURCE_REGISTRY = [
       {
         name: "jtwc_storms",
         description:
-          "Active JTWC tropical cyclones for WP/IO/SH (NIO) from jtwc.rss + per-storm web.txt. Skips EPAC/CPAC (use nhc_storms). include_advisories=true attaches slim ABPW/ABIO. include_invests=true parses ABPW INVESTs as TropicalStorm classification=INVEST (does not duplicate named TCs). Empty basins → count 0. confidence_tier=specialist.",
+          "Active JTWC tropical cyclones for WP/IO/SH (NIO) from jtwc.rss + per-storm web.txt. Skips EPAC/CPAC (use nhc_storms). Advisory items detected via abpwweb.txt/abioweb.txt URL/path (not title match alone). include_advisories=true attaches slim ABPW/ABIO. include_invests=true parses ABPW INVESTs as TropicalStorm classification=INVEST (does not duplicate named TCs). include_tcw=true slim-parses linked .tcw. Empty basins → count 0. confidence_tier=specialist.",
         inputSchema: {
           type: "object",
           properties: {
@@ -2344,6 +2849,10 @@ const SOURCE_REGISTRY = [
             include_invests: {
               type: "boolean",
               description: "If true, parse ABPW/ABIO disturbance INVESTs into storms[] as classification=INVEST (default false)",
+            },
+            include_tcw: {
+              type: "boolean",
+              description: "If true, fetch and slim-parse linked .tcw when present (default false)",
             },
           },
         },
@@ -2381,6 +2890,14 @@ const SOURCE_REGISTRY = [
               type: "boolean",
               description: "GOES primary xrays-6-hour latest/peak sample, not full series (default false)",
             },
+            include_kp_3h: {
+              type: "boolean",
+              description: "Official NOAA 3-hour planetary Kp (noaa-planetary-k-index.json); default false",
+            },
+            include_flux: {
+              type: "boolean",
+              description: "Slim latest solar-radio-flux.json sample (default false)",
+            },
           },
         },
         run: handleSwpcSnapshot,
@@ -2396,15 +2913,17 @@ const SOURCE_REGISTRY = [
       {
         name: "meteoalarm_alerts",
         description:
-          "MeteoAlarm per-country legacy Atom feed (germany, france, united-kingdom, …). Europe-wide Atom is 404 — do not request it. WebSub is not a tool; clients may WebSub the Atom URLs themselves. Returns OfficialAlert[]. confidence_tier=official.",
+          "MeteoAlarm per-country legacy Atom feed (germany, france, united-kingdom, …). ISO aliases (DE, NL, …) accepted. format=cap or type=application/cap+xml fetches entry CAP links (capped). Europe-wide Atom is 404 — do not request it. WebSub is not a tool. Returns OfficialAlert[]. confidence_tier=official.",
         inputSchema: {
           type: "object",
           properties: {
             country: {
               type: "string",
-              description: "Country slug, e.g. germany | france | united-kingdom",
+              description: "Country slug or alias, e.g. germany | DE | netherlands | NL",
             },
-            limit: { type: "number", description: "Max alerts to return (default 50, max 200)" },
+            format: { type: "string", description: "atom (default) | cap" },
+            type: { type: "string", description: "Set application/cap+xml to fetch CAP links" },
+            limit: { type: "number", description: "Max alerts to return (default 50 atom / 5 CAP)" },
           },
           required: ["country"],
         },
@@ -2415,21 +2934,22 @@ const SOURCE_REGISTRY = [
   {
     id: "firms",
     label: "NASA FIRMS fire hotspots",
-    core: true, // registered always; key checked at runtime for csv/status/availability
+    core: true,
     confidence_tier: "overlay",
     tools: [
       {
         name: "firms_hotspots",
         description:
-          "NASA FIRMS. mode=csv (default, needs FIRMS_MAP_KEY, km bbox via radius_km) | kml (keyless regional footprint) | status | availability (need MAP_KEY). Never invent a key. confidence_tier=overlay.",
+          "NASA FIRMS. mode=csv (default, needs FIRMS_MAP_KEY, km bbox via radius_km) | kml (keyless regional footprint) | status | availability | missing_data (need MAP_KEY). Never invent a key. confidence_tier=overlay.",
         inputSchema: {
           type: "object",
           properties: {
             mode: {
               type: "string",
-              enum: ["csv", "kml", "status", "availability"],
-              description: "csv (default) | kml | status | availability",
+              enum: ["csv", "kml", "status", "availability", "missing_data"],
+              description: "csv (default) | kml | status | availability | missing_data",
             },
+            format: { type: "string", description: "Alias of mode (e.g. kml)" },
             lat: { type: "number" },
             lon: { type: "number" },
             radius_km: { type: "number", description: "CSV bbox radius from lat/lon (default 100 km)" },
@@ -2463,15 +2983,27 @@ const SOURCE_REGISTRY = [
       {
         name: "eonet_events",
         description:
-          "Optional. NASA EONET v3 events. format=json|geojson; include_layers. Earthquakes category excluded — use usgs_quakes. Returns NaturalEvent[]. confidence_tier=catalog. Enable with WEATHER_OPTIONAL=1 or WEATHER_ENABLE_EONET=1.",
+          "Optional. NASA EONET v3 events. format=json|geojson; include_layers; id/eventid; mode=categories|sources; days; bbox; source. Earthquakes category excluded — use usgs_quakes. Returns NaturalEvent[]. confidence_tier=catalog. Enable with WEATHER_OPTIONAL=1 or WEATHER_ENABLE_EONET=1.",
         inputSchema: {
           type: "object",
           properties: {
             limit: { type: "number" },
             status: { type: "string", description: "open | closed (default open)" },
             category: { type: "string", description: "EONET category id (not earthquakes)" },
+            categories: { type: "string", description: "Alias of category" },
             format: { type: "string", enum: ["json", "geojson"], description: "json (default) | geojson" },
             include_layers: { type: "boolean", description: "Also fetch EONET layers (default false)" },
+            id: { type: "string", description: "Single EONET event id" },
+            eventid: { type: "string", description: "Alias of id" },
+            mode: { type: "string", description: "categories | sources (default events list)" },
+            source: { type: "string", description: "EONET source id filter" },
+            sources: { type: "string", description: "Alias of source" },
+            days: { type: "number", description: "Limit to events in the past N days" },
+            bbox: { type: "string", description: "minLon,maxLat,maxLon,minLat" },
+            west: { type: "number" },
+            north: { type: "number" },
+            east: { type: "number" },
+            south: { type: "number" },
           },
         },
         run: handleEonet,
@@ -2505,6 +3037,10 @@ const SOURCE_REGISTRY = [
             todate: { type: "string", description: "Alias of toDate" },
             fromdatetime: { type: "string", description: "Deprecated alias of fromDate (not sent as query key)" },
             todatetime: { type: "string", description: "Deprecated alias of toDate (not sent as query key)" },
+            eventlist: { type: "string", description: "SEARCH event types, e.g. EQ;TC or FL" },
+            pagenumber: { type: "number", description: "SEARCH page (blocks of 100, default 1)" },
+            page: { type: "number", description: "Alias of pagenumber" },
+            pagesize: { type: "number", description: "SEARCH page size (max 100)" },
           },
         },
         run: handleGdacs,
@@ -2520,15 +3056,15 @@ const SOURCE_REGISTRY = [
       {
         name: "gvp_weekly",
         description:
-          "Optional. mode=weekly (default, WeeklyVolcanoCAP.xml first, RSS fallback) | lookup (WFS Holocene_Volcanoes GeoJSON filtered by name/country, maxFeatures cap). confidence_tier=specialist. Enable with WEATHER_OPTIONAL=1 or WEATHER_ENABLE_GVP=1.",
+          "Optional. mode=weekly (default, WeeklyVolcanoCAP.xml first, RSS fallback; limit slices CAP <info> children, specialist) | lookup (WFS Holocene_Volcanoes GeoJSON filtered by name/country, maxFeatures/limit cap, catalog). Pleistocene gazetteer is not exposed. Enable with WEATHER_OPTIONAL=1 or WEATHER_ENABLE_GVP=1.",
         inputSchema: {
           type: "object",
           properties: {
             mode: { type: "string", enum: ["weekly", "lookup"], description: "weekly (default) | lookup" },
             name: { type: "string", description: "Lookup: volcano name contains" },
             country: { type: "string", description: "Lookup: country contains" },
-            maxFeatures: { type: "number", description: "Lookup WFS cap (default 50, max 100)" },
-            limit: { type: "number" },
+            maxFeatures: { type: "number", description: "Lookup WFS cap or weekly alias of limit (default 50, max 100)" },
+            limit: { type: "number", description: "Weekly CAP <info> slice; lookup alias of maxFeatures" },
           },
         },
         run: handleGvpWeekly,
@@ -2544,15 +3080,20 @@ const SOURCE_REGISTRY = [
       {
         name: "open_meteo_forecast",
         description:
-          "Optional. Open-Meteo forecast (overlay, free non-commercial — see TERMS.md). If name is set, geocode first. hourly=true adds hourly series; current weather always included when available. confidence_tier=overlay. Enable with WEATHER_OPTIONAL=1 or WEATHER_ENABLE_OPEN_METEO=1.",
+          "Optional. Open-Meteo overlay (free non-commercial — see TERMS.md). mode=forecast (default) | air_quality | flood. If name is set, geocode first. hourly=true adds hourly series on forecast/air_quality. confidence_tier=overlay. Enable with WEATHER_OPTIONAL=1 or WEATHER_ENABLE_OPEN_METEO=1.",
         inputSchema: {
           type: "object",
           properties: {
             lat: { type: "number" },
             lon: { type: "number" },
             name: { type: "string", description: "Place name; geocoded via Open-Meteo geocoding API" },
-            forecast_days: { type: "number", description: "1–16 (default 3)" },
+            forecast_days: { type: "number", description: "Forecast 1–16 (default 3); flood up to 92" },
             hourly: { type: "boolean", description: "Include hourly series (default false)" },
+            mode: {
+              type: "string",
+              enum: ["forecast", "air_quality", "flood"],
+              description: "forecast (default) | air_quality | flood",
+            },
           },
         },
         run: handleOpenMeteo,

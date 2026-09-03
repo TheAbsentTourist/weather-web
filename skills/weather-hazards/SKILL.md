@@ -23,21 +23,24 @@ existing tools rather than asking for a new tool name.
 | US hourly forecast | nws_forecast | `product=hourly` | official |
 | US gridpoint forecast | nws_forecast | `product=grid` | official |
 | Latest station observation | nws_forecast | `product=observation` | official |
-| Area Forecast Discussion / HWO | nws_forecast | `product=afd` or `hwo` (CWA location=MRX not KMRX) | official |
-| US active alerts at a point/state/zone | nws_alerts | `event`, `zone`, `status`, `severity`, `urgency`, `region` optional | official |
-| Earthquakes (feed, significant, 4.5/2.5/1.0, radius, detail, FDSN meta; PAGER alert/mmi/cdi/felt) | usgs_quakes | `feed`, `eventid`, `meta` | catalog |
+| Station observation history | nws_forecast | `product=observations` or `history=true` | official |
+| Area Forecast Discussion / HWO | nws_forecast | `product=afd` or `hwo` (CWA location=EWX not Kxxx) | official |
+| US active alerts at a point/state/zone | nws_alerts | `event`, `zone`, `status`, `severity`, `urgency`, `certainty`, `region` optional | official |
+| NWS alert event type list | nws_alerts | `mode=types` | official |
+| Earthquakes (feed, significant, 4.5/2.5/1.0, radius, detail, FDSN meta; PAGER alert/mmi/cdi/felt) | usgs_quakes | `feed`, `eventid`, `meta`; query `endtime`/`maxmagnitude`/`updatedafter`/bbox/`types` | catalog |
 | Active Atlantic/E. Pacific/C. Pacific tropical cyclones (AL/EP/CP) | nhc_storms | `include_advisories` basin RSS; `include_outlook` gtwo.xml | official |
-| Active West Pacific / Indian Ocean / Southern Hemisphere (WP/IO/SH) | jtwc_storms | `include_advisories` ABPW/ABIO; `include_invests`; skips EPAC/CPAC | specialist |
-| Geomagnetic / radiation / radio scales + alerts | swpc_snapshot | `include_indices`, `include_aurora`, `include_icao`, `include_events`, `include_xrays` | specialist |
-| European country warnings | meteoalarm_alerts (per-country slug) | no WebSub tool | official |
+| Active West Pacific / Indian Ocean / Southern Hemisphere (WP/IO/SH) | jtwc_storms | `include_advisories` ABPW/ABIO (URL/path); `include_invests`; `include_tcw`; skips EPAC/CPAC | specialist |
+| Geomagnetic / radiation / radio scales + alerts | swpc_snapshot | `include_indices`, `include_aurora`, `include_icao`, `include_events`, `include_xrays`, `include_kp_3h`, `include_flux` | specialist |
+| European country warnings | meteoalarm_alerts (per-country slug or DE/NL) | `format=cap` optional; no WebSub tool | official |
 | Satellite fire hotspots | firms_hotspots | `mode=csv` (needs key), `days` 1–5, km `radius_km` | overlay |
-| Keyless regional fire footprint | firms_hotspots | `mode=kml` | overlay |
-| FIRMS key status / date availability | firms_hotspots | `mode=status` or `availability` (need MAP_KEY) | overlay |
-| Optional global natural events | eonet_events | `format=json\|geojson`, `include_layers` | catalog |
-| Optional disaster impact alerts | gdacs_events | `mode=rss_24h\|rss_full\|events4app\|search` (`fromDate`/`toDate`) | specialist |
-| Optional weekly volcano activity | gvp_weekly | `mode=weekly` (CAP `<info>` per volcano) | specialist |
-| Optional Holocene volcano lookup | gvp_weekly | `mode=lookup` + `name`/`country` | specialist |
-| Optional non-commercial forecast overlay | open_meteo_forecast | `name` geocodes; `hourly`; current included | overlay |
+| Keyless regional fire footprint | firms_hotspots | `mode=kml` or `format=kml` | overlay |
+| FIRMS key status / date availability / missing dates | firms_hotspots | `mode=status` or `availability` or `missing_data` (need MAP_KEY) | overlay |
+| Optional global natural events | eonet_events | `format=json\|geojson`, `include_layers`, `id`, `days`, `bbox`, `source`; `mode=categories\|sources` | catalog |
+| Optional disaster impact alerts | gdacs_events | `mode=rss_24h\|rss_full\|events4app\|search` (`fromDate`/`toDate`/`eventlist`/`pagenumber`) | specialist |
+| Optional weekly volcano activity | gvp_weekly | `mode=weekly` (CAP `<info>` per volcano, `limit`) | specialist |
+| Optional Holocene volcano lookup | gvp_weekly | `mode=lookup` + `name`/`country` | catalog |
+| Optional non-commercial forecast overlay | open_meteo_forecast | `mode=forecast` (default); `name` geocodes; `hourly` | overlay |
+| Optional air quality / flood overlay | open_meteo_forecast | `mode=air_quality` or `flood` | overlay |
 
 Optional tools appear only when WEATHER_OPTIONAL=1 or the matching
 WEATHER_ENABLE_* flag is set.
