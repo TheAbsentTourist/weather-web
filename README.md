@@ -1,5 +1,9 @@
 # weather-hazards
 
+<p align="center">
+  <img src="assets/logo.png" alt="weather-hazards" width="160" height="160" />
+</p>
+
 Live weather and disaster feeds for Cursor (and other MCP hosts): US forecasts and alerts, earthquakes, tropical storms, space weather, European warnings, and fire hotspots.
 
 This repo is a **plugin**, not a website. Agents call it as a stdio MCP server (`server.mjs`). Zero npm dependencies. Node.js 18+. MIT.
