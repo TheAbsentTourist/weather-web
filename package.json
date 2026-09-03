@@ -1,6 +1,6 @@
 {
   "name": "weather-hazards",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": false,
   "type": "module",
   "description": "Agent Plugin: weather and disaster hazard MCP tools (NWS, USGS, NHC, JTWC, SWPC, MeteoAlarm, FIRMS; optional EONET/GDACS/GVP/Open-Meteo).",

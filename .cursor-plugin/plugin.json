@@ -1,7 +1,7 @@
 {
   "name": "weather-hazards",
   "displayName": "Weather Hazards",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Weather + disaster hazards: NWS forecast/alerts, USGS earthquakes, NHC storms, JTWC (WP/IO/SH), NOAA SWPC, MeteoAlarm (EU), NASA FIRMS. Optional: EONET, GDACS, GVP, Open-Meteo.",
   "author": {
     "name": "TheAbsentTourist",
@@ -35,26 +35,39 @@
         "type": "string",
         "title": "Enable EONET",
         "description": "Set to 1 to enable eonet_events. Leave blank to leave it off.",
-        "enum": ["", "1"]
+        "enum": [
+          "",
+          "1"
+        ]
       },
       "WEATHER_ENABLE_GDACS": {
         "type": "string",
         "title": "Enable GDACS",
         "description": "Set to 1 to enable gdacs_events. Leave blank to leave it off.",
-        "enum": ["", "1"]
+        "enum": [
+          "",
+          "1"
+        ]
       },
       "WEATHER_ENABLE_GVP": {
         "type": "string",
         "title": "Enable GVP",
         "description": "Set to 1 to enable gvp_weekly. Leave blank to leave it off.",
-        "enum": ["", "1"]
+        "enum": [
+          "",
+          "1"
+        ]
       },
       "WEATHER_ENABLE_OPEN_METEO": {
         "type": "string",
         "title": "Enable Open-Meteo",
         "description": "Set to 1 to enable open_meteo_forecast. Leave blank to leave it off.",
-        "enum": ["", "1"]
+        "enum": [
+          "",
+          "1"
+        ]
       }
     }
-  }
+  },
+  "logo": "assets/logo.png"
 }
