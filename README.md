@@ -1,7 +1,7 @@
-# weather-hazards
+# weather-web
 
 <p align="center">
-  <img src="assets/logo.png" alt="weather-hazards" width="160" height="160" />
+  <img src="assets/logo.png" alt="weather-web" width="160" height="160" />
 </p>
 
 Live weather and disaster feeds for Cursor (and other MCP hosts): US forecasts and alerts, earthquakes, tropical storms, space weather, European warnings, and fire hotspots.
@@ -43,23 +43,23 @@ Most tools work with no API key. FIRMS CSV-family modes need a NASA FIRMS MAP_KE
 2. Put this repo in Cursor’s local plugins folder as a **real directory** (copy or clone — do not symlink from outside that folder):
 
 ```text
-Windows:      %USERPROFILE%\.cursor\plugins\local\weather-hazards
-macOS/Linux:  ~/.cursor/plugins/local/weather-hazards
+Windows:      %USERPROFILE%\.cursor\plugins\local\weather-web
+macOS/Linux:  ~/.cursor/plugins/local/weather-web
 ```
 
 ```bash
-git clone https://github.com/TheAbsentTourist/weather-web.git ~/.cursor/plugins/local/weather-hazards
+git clone https://github.com/TheAbsentTourist/weather-web.git ~/.cursor/plugins/local/weather-web
 ```
 
 On Windows PowerShell, that is:
 
 ```powershell
-git clone https://github.com/TheAbsentTourist/weather-web.git $env:USERPROFILE\.cursor\plugins\local\weather-hazards
+git clone https://github.com/TheAbsentTourist/weather-web.git $env:USERPROFILE\.cursor\plugins\local\weather-web
 ```
 
 3. Confirm `server.mjs` exists in that folder.
 4. Reload Cursor: Command Palette → **Developer: Reload Window**.
-5. Check Customize / Plugins for **weather-hazards**.
+5. Check Customize / Plugins for **weather-web**.
 
 Teams/Enterprise: local plugins may be blocked until an admin allows them.
 
@@ -100,7 +100,7 @@ MCP logs (Output → MCP) look like:
 - `The system cannot find the path specified.`
 - `MCP error -32000: Connection closed`
 
-Success: the `weather-hazards` server stays connected and tools like `nws_forecast` / `usgs_quakes` appear.
+Success: the `weather-web` server stays connected and tools like `nws_forecast` / `usgs_quakes` appear.
 
 ### Fix for a human (or for Cursor / another agent)
 
@@ -123,10 +123,10 @@ Use the `.exe` path that prints. If nothing prints, install Node from nodejs.org
 It must be:
 
 ```text
-%USERPROFILE%\.cursor\plugins\local\weather-hazards\server.mjs
+%USERPROFILE%\.cursor\plugins\local\weather-web\server.mjs
 ```
 
-Example: `C:\Users\Ada\.cursor\plugins\local\weather-hazards\server.mjs`
+Example: `C:\Users\Ada\.cursor\plugins\local\weather-web\server.mjs`
 
 If the file is not there, clone/copy the repo to that path first (Install, above).
 
@@ -139,10 +139,10 @@ If the file **does not exist**, create it:
 ```json
 {
   "mcpServers": {
-    "weather-hazards": {
+    "weather-web": {
       "command": "C:\\Program Files\\nodejs\\node.exe",
       "args": [
-        "C:\\Users\\USERNAME\\.cursor\\plugins\\local\\weather-hazards\\server.mjs"
+        "C:\\Users\\USERNAME\\.cursor\\plugins\\local\\weather-web\\server.mjs"
       ]
     }
   }
@@ -151,7 +151,7 @@ If the file **does not exist**, create it:
 
 Replace `USERNAME` and the Node path with the real values from A and B. In JSON, backslashes must be doubled (`\\`).
 
-If `mcp.json` **already exists**, keep every other server. Only add or replace the `"weather-hazards"` entry inside `"mcpServers"`. Do not delete `steam-web` or anything else.
+If `mcp.json` **already exists**, keep every other server. Only add or replace the `"weather-web"` entry inside `"mcpServers"`. Do not delete `steam-web` or anything else.
 
 Optional env (same names as Plugins → Configure) can live under that server’s `"env"`:
 
@@ -166,12 +166,12 @@ Optional env (same names as Plugins → Configure) can live under that server’
 }
 ```
 
-**D. Also patch the plugin `mcp.json` if the failing server id is `plugin-weather-hazards-weather-hazards`**
+**D. Also patch the plugin `mcp.json` if the failing server id is `plugin-weather-web-weather-web`**
 
-Cursor often launches the **plugin** copy, not the user file. If user `mcp.json` is correct but logs still show `plugin-weather-hazards-weather-hazards` and `C:\Users\<you>\server.mjs`, edit:
+Cursor often launches the **plugin** copy, not the user file. If user `mcp.json` is correct but logs still show `plugin-weather-web-weather-web` and `C:\Users\<you>\server.mjs`, edit:
 
 ```text
-%USERPROFILE%\.cursor\plugins\local\weather-hazards\mcp.json
+%USERPROFILE%\.cursor\plugins\local\weather-web\mcp.json
 ```
 
 Set `command` to the full `node.exe` path and `args` to a one-element array with the full `server.mjs` path (same as C). Keep the `"env"` block. This file is local-only; a later git pull will overwrite it, so re-apply after updates.
@@ -186,9 +186,9 @@ Fully quit and reopen Cursor, or **Developer: Reload Window**. Confirm MCP conne
 
 If you are an AI assistant installing this for a user:
 
-1. Clone or extract to `%USERPROFILE%\.cursor\plugins\local\weather-hazards` (Windows) or `~/.cursor/plugins/local/weather-hazards` (macOS/Linux). Folder name must be `weather-hazards`.
+1. Clone or extract to `%USERPROFILE%\.cursor\plugins\local\weather-web` (Windows) or `~/.cursor/plugins/local/weather-web` (macOS/Linux). Folder name must be `weather-web`.
 2. Verify `server.mjs` exists. Run `node --check server.mjs` if Node is on PATH.
-3. On Windows Cursor, do **not** assume the shipped plugin `mcp.json` will work. Resolve `node.exe` and `server.mjs` with real filesystem paths, then merge `weather-hazards` into `~/.cursor/mcp.json` as in **Fix** above. If logs still use identifier `plugin-weather-hazards-weather-hazards`, apply the same absolute paths in the plugin’s `mcp.json`.
+3. On Windows Cursor, do **not** assume the shipped plugin `mcp.json` will work. Resolve `node.exe` and `server.mjs` with real filesystem paths, then merge `weather-web` into `~/.cursor/mcp.json` as in **Fix** above. If logs still use identifier `plugin-weather-web-weather-web`, apply the same absolute paths in the plugin’s `mcp.json`.
 4. Never write another user’s paths into the git repo. Never invent `FIRMS_MAP_KEY`.
 5. Tell the user to reload Cursor and to set FIRMS / optional flags only if they need those tools.
 
@@ -288,4 +288,4 @@ Issues: https://github.com/TheAbsentTourist/weather-web/issues
 
 Community project — best-effort support, no SLA. Do not paste API keys or Steam/FIRMS secrets into issues.
 
-More detail: [TERMS.md](TERMS.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.6.md](CHANGELOG-0.1.6.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).
+More detail: [TERMS.md](TERMS.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.10.md](CHANGELOG-0.1.10.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).

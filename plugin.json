@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "weather-hazards",
-  "version": "0.1.9",
+  "name": "weather-web",
+  "version": "0.1.10",
   "description": "Weather + disaster hazards: NWS forecast/alerts, USGS earthquakes, NHC storms, JTWC (WP/IO/SH), NOAA SWPC, MeteoAlarm (EU), NASA FIRMS. Optional: EONET, GDACS, GVP, Open-Meteo.",
   "author": {
     "name": "TheAbsentTourist",

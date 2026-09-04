@@ -1,4 +1,4 @@
-# Terms and attribution — weather-hazards
+# Terms and attribution — weather-web
 
 This plugin is unofficial software. It is **not** affiliated with, endorsed by, or
 approved by NOAA, NWS, NHC, JTWC, USGS, NASA, MeteoAlarm/EUMETNET, Smithsonian GVP,
