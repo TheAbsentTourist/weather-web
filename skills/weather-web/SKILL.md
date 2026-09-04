@@ -1,17 +1,17 @@
 ---
-name: weather-hazards
+name: weather-web
 description: >
   Use when the user asks about weather forecasts, watches/warnings/advisories,
   earthquakes, tropical cyclones/hurricanes/typhoons (NHC + JTWC), space weather, European MeteoAlarm
   warnings, wildfire hotspots (NASA FIRMS), or optional natural-event catalogs
-  (EONET, GDACS, GVP volcanoes, Open-Meteo). Call the weather-hazards MCP tools.
+  (EONET, GDACS, GVP volcanoes, Open-Meteo). Call the weather-web MCP tools.
   Never invent observations, alerts, or API keys. Prefer official sources;
   respect confidence_tier on every hazard payload.
 ---
 
 # Weather + Disaster Hazards
 
-Call only the weather-hazards MCP tools. Return tool JSON as-is; do not invent
+Call only the weather-web MCP tools. Return tool JSON as-is; do not invent
 forecasts, quakes, storms, alerts, or a FIRMS MAP_KEY. Prefer flags/modes on the
 existing tools rather than asking for a new tool name.
 

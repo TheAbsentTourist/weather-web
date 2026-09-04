@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * weather-hazards — zero-dep stdio MCP
+ * weather-web — zero-dep stdio MCP
  * Organization: SOURCE_REGISTRY drives tool schemas + handlers (not a flat TOOLS array).
  * Core sources work without keys. Optional sources gated by WEATHER_OPTIONAL=1 or WEATHER_ENABLE_*.
  * FIRMS always registered; missing FIRMS_MAP_KEY → clear config error (never invent a key).
@@ -12,13 +12,13 @@ import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 
 const PROTOCOL_VERSION = "2024-11-05";
-const SERVER_INFO = { name: "weather-hazards", version: "0.1.9" };
+const SERVER_INFO = { name: "weather-web", version: "0.1.10" };
 const TIMEOUT_MS = 25_000;
-const UA = "WeatherHazardsPlugin/0.1.9 (contact: chucktastictime@gmail.com)";
+const UA = "WeatherWebPlugin/0.1.10 (contact: chucktastictime@gmail.com)";
 const NWS_UA = UA;
 /** CloudFront on metoc.navy.mil often 403s the generic plugin UA — JTWC fetches use a browser-like UA. */
 const JTWC_UA =
-  "Mozilla/5.0 (compatible; WeatherHazardsPlugin/0.1.9; +https://github.com/TheAbsentTourist/weather-web)";
+  "Mozilla/5.0 (compatible; WeatherWebPlugin/0.1.10; +https://github.com/TheAbsentTourist/weather-web)";
 const JTWC_RSS = "https://www.metoc.navy.mil/jtwc/rss/jtwc.rss";
 const JTWC_ABPW = "https://www.metoc.navy.mil/jtwc/products/abpwweb.txt";
 const JTWC_ABIO = "https://www.metoc.navy.mil/jtwc/products/abioweb.txt";
@@ -3296,7 +3296,7 @@ if (startedAsMain()) {
   });
   stdin.on("end", () => pump());
   stdin.on("error", () => process.exit(1));
-  if (stdin.isTTY) process.stderr.write("weather-hazards MCP expects stdio JSON-RPC\n");
+  if (stdin.isTTY) process.stderr.write("weather-web MCP expects stdio JSON-RPC\n");
   stdin.resume();
 }
 

@@ -1,4 +1,4 @@
-# CHANGELOG — weather-hazards 0.1.4
+# CHANGELOG — weather-web 0.1.4
 
 Date: 2026-09-03
 

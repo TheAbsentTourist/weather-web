@@ -1,12 +1,13 @@
-# VERIFY — weather-hazards 0.1.6
+# VERIFY — weather-web 0.1.10
 
-Date: 2026-09-03 UTC
+Date: 2026-09-04 UTC
 
 ## Install
 - Workspace: `/workspace`
-- Version: **0.1.6** in package.json, plugin.json, `.cursor-plugin/plugin.json`, server initialize `serverInfo`, UA strings, README, CHANGELOG-0.1.6.md, smoke clientInfo, this file
+- Version: **0.1.10** in package.json, plugin.json, `.cursor-plugin/plugin.json`, server initialize `serverInfo`, UA strings, README, CHANGELOG-0.1.10.md, smoke clientInfo, this file
+- Package / plugin / MCP server id: `weather-web` (renamed from `weather-hazards`)
 - Default test point: Austin, TX 30.2672, -97.7431
-- Path intent: `~/.cursor/plugins/local/weather-hazards` (real directory, not a symlink from outside that folder)
+- Path intent: `~/.cursor/plugins/local/weather-web` (real directory, not a symlink from outside that folder)
 
 ## Checks
 | Check | Result |
@@ -15,8 +16,10 @@ Date: 2026-09-03 UTC
 | `node scripts/mcp-path-test.mjs` | pending live run |
 | Core smoke (`scripts/smoke.mjs`) | pending live run |
 | FIRMS without key | expect `config_error` on csv; kml keyless |
-| `.cursor-plugin/plugin.json` | `FIRMS_MAP_KEY` + four `WEATHER_ENABLE_*`; **no** `WEATHER_OPTIONAL` in variables |
-| Shipped `mcp.json` | `node` + `["./server.mjs"]` + `cwd` `"./"`; `${WEATHER_OPTIONAL}` kept for CLI/host |
+| `.cursor-plugin/plugin.json` | `name` `weather-web`, `displayName` Weather Web; `FIRMS_MAP_KEY` + four `WEATHER_ENABLE_*`; **no** `WEATHER_OPTIONAL` in variables |
+| Shipped `mcp.json` | server key `weather-web`; `node` + `["./server.mjs"]` + `cwd` `"./"`; `${WEATHER_OPTIONAL}` kept for CLI/host |
+| Skill | `skills/weather-web/SKILL.md` frontmatter `name: weather-web` |
+| No leftover package-id `weather-hazards` in manifests / mcp / serverInfo / smoke / install docs | pending grep |
 | No EDR / USGS Water / GIS RSS tool | unchanged |
 
 ## Configure schema

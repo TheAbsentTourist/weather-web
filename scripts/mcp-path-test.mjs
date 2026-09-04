@@ -21,9 +21,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const mcpRaw = readFileSync(join(root, "mcp.json"), "utf8");
 const mcp = JSON.parse(mcpRaw);
-const server = mcp.mcpServers?.["weather-hazards"];
+const server = mcp.mcpServers?.["weather-web"];
 
-assert.ok(server, "weather-hazards server missing from mcp.json");
+assert.ok(server, "weather-web server missing from mcp.json");
 assert.equal(server.type, "stdio");
 
 const portableCommands = new Set(["node", "cmd.exe"]);
