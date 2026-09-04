@@ -12,14 +12,14 @@ Date: 2026-09-04 UTC
 ## Checks
 | Check | Result |
 |---|---|
-| `node --check server.mjs` | pending live run |
-| `node scripts/mcp-path-test.mjs` | pending live run |
-| Core smoke (`scripts/smoke.mjs`) | pending live run |
-| FIRMS without key | expect `config_error` on csv; kml keyless |
+| `node --check server.mjs` | PASS |
+| `node scripts/mcp-path-test.mjs` | PASS |
+| Core smoke (`scripts/smoke.mjs`) | PASS (Austin default; core tools listed; `serverInfo.name` `weather-web` 0.1.10) |
+| FIRMS without key | kml keyless PASS (`FireFootprintKml`); csv `config_error` is extended-smoke only |
 | `.cursor-plugin/plugin.json` | `name` `weather-web`, `displayName` Weather Web; `FIRMS_MAP_KEY` + four `WEATHER_ENABLE_*`; **no** `WEATHER_OPTIONAL` in variables |
 | Shipped `mcp.json` | server key `weather-web`; `node` + `["./server.mjs"]` + `cwd` `"./"`; `${WEATHER_OPTIONAL}` kept for CLI/host |
 | Skill | `skills/weather-web/SKILL.md` frontmatter `name: weather-web` |
-| No leftover package-id `weather-hazards` in manifests / mcp / serverInfo / smoke / install docs | pending grep |
+| No leftover package-id `weather-hazards` in manifests / mcp / serverInfo / smoke / install docs | PASS — only historical changelog bodies + this rename note |
 | No EDR / USGS Water / GIS RSS tool | unchanged |
 
 ## Configure schema
