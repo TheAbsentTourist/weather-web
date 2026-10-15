@@ -1,7 +1,7 @@
 # weather-web
 
 <p align="center">
-  <img src="assets/logo.png" alt="weather-web" width="160" height="160" />
+  <img src="assets/logo-plate.png" alt="weather-web" width="160" height="160" />
 </p>
 
 Live weather and disaster feeds for Cursor (and other MCP hosts): US forecasts and alerts, earthquakes, tropical storms, space weather, European warnings, and fire hotspots.
@@ -198,7 +198,7 @@ If you are an AI assistant installing this for a user:
 
 Set `FIRMS_MAP_KEY` via **Plugins → Configure** (Cursor), the host environment, or `$PLUGIN_DATA/config.json` copied from `config.example.json`. Do not paste keys into the repo.
 
-**Plugins → Configure** shows `FIRMS_MAP_KEY` and the four per-source toggles (`WEATHER_ENABLE_EONET`, `WEATHER_ENABLE_GDACS`, `WEATHER_ENABLE_GVP`, `WEATHER_ENABLE_OPEN_METEO`). There is no master `WEATHER_OPTIONAL` control in that UI; that flag still works from env / `config.json` / CLI (`WEATHER_OPTIONAL=1`).
+**Plugins → Configure** shows `FIRMS_MAP_KEY` and the four per-source toggles (`WEATHER_ENABLE_EONET`, `WEATHER_ENABLE_GDACS`, `WEATHER_ENABLE_GVP`, `WEATHER_ENABLE_OPEN_METEO`). There is no master `WEATHER_OPTIONAL` control in that UI; that flag still works from `$PLUGIN_DATA/config.json` or the CLI (`WEATHER_OPTIONAL=1 node server.mjs`). The shipped `mcp.json` only passes declared Configure variables, as the Cursor submission checklist requires.
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
@@ -288,4 +288,4 @@ Issues: https://github.com/TheAbsentTourist/weather-web/issues
 
 Community project — best-effort support, no SLA. Do not paste API keys or Steam/FIRMS secrets into issues.
 
-More detail: [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [SECURITY.md](SECURITY.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.11.md](CHANGELOG-0.1.11.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).
+More detail: [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [SECURITY.md](SECURITY.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.12.md](CHANGELOG-0.1.12.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).

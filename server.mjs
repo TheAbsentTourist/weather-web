@@ -12,13 +12,13 @@ import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 
 const PROTOCOL_VERSION = "2024-11-05";
-const SERVER_INFO = { name: "weather-web", version: "0.1.11" };
+const SERVER_INFO = { name: "weather-web", version: "0.1.12" };
 const TIMEOUT_MS = 25_000;
-const UA = "WeatherWebPlugin/0.1.11 (contact: chucktastictime@gmail.com)";
+const UA = "WeatherWebPlugin/0.1.12 (contact: chucktastictime@gmail.com)";
 const NWS_UA = UA;
 /** CloudFront on metoc.navy.mil often 403s the generic plugin UA — JTWC fetches use a browser-like UA. */
 const JTWC_UA =
-  "Mozilla/5.0 (compatible; WeatherWebPlugin/0.1.11; +https://github.com/TheAbsentTourist/weather-web)";
+  "Mozilla/5.0 (compatible; WeatherWebPlugin/0.1.12; +https://github.com/TheAbsentTourist/weather-web)";
 const JTWC_RSS = "https://www.metoc.navy.mil/jtwc/rss/jtwc.rss";
 const JTWC_ABPW = "https://www.metoc.navy.mil/jtwc/products/abpwweb.txt";
 const JTWC_ABIO = "https://www.metoc.navy.mil/jtwc/products/abioweb.txt";

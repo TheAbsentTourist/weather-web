@@ -63,7 +63,7 @@ assert.doesNotMatch(mcpRaw, /Program Files/i);
 assert.doesNotMatch(mcpRaw, /\$\{PLUGIN_ROOT\}/);
 
 assert.equal(server.env?.FIRMS_MAP_KEY, "${FIRMS_MAP_KEY}");
-assert.equal(server.env?.WEATHER_OPTIONAL, "${WEATHER_OPTIONAL}");
+assert.equal(server.env?.WEATHER_OPTIONAL, undefined, "WEATHER_OPTIONAL is env/config.json/CLI only; every mcp.json ${VAR} must be a declared Configure variable");
 assert.equal(server.env?.WEATHER_ENABLE_EONET, "${WEATHER_ENABLE_EONET}");
 assert.equal(server.env?.WEATHER_ENABLE_GDACS, "${WEATHER_ENABLE_GDACS}");
 assert.equal(server.env?.WEATHER_ENABLE_GVP, "${WEATHER_ENABLE_GVP}");
@@ -90,7 +90,6 @@ for (const value of Object.values(server.env ?? {})) {
   }
 }
 for (const name of placeholders) {
-  if (name === "WEATHER_OPTIONAL") continue;
   assert.ok(vars[name], `mcp.json env placeholder \${${name}} must appear in .cursor-plugin/plugin.json variables.properties`);
 }
 

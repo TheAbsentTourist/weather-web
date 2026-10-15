@@ -8,7 +8,6 @@
       "cwd": "./",
       "env": {
         "FIRMS_MAP_KEY": "${FIRMS_MAP_KEY}",
-        "WEATHER_OPTIONAL": "${WEATHER_OPTIONAL}",
         "WEATHER_ENABLE_EONET": "${WEATHER_ENABLE_EONET}",
         "WEATHER_ENABLE_GDACS": "${WEATHER_ENABLE_GDACS}",
         "WEATHER_ENABLE_GVP": "${WEATHER_ENABLE_GVP}",
