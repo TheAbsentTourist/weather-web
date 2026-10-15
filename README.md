@@ -8,7 +8,7 @@ Live weather and disaster feeds for Cursor (and other MCP hosts): US forecasts a
 
 This repo is a **plugin**, not a website. Agents call it as a stdio MCP server (`server.mjs`). Zero npm dependencies. Node.js 18+. MIT.
 
-Not affiliated with NOAA, USGS, NASA, or any other agency. Do not use this instead of official warning channels for life-safety decisions. See [TERMS.md](TERMS.md).
+Not affiliated with NOAA, USGS, NASA, or any other agency. Do not use this instead of official warning channels for life-safety decisions. See [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), and [SECURITY.md](SECURITY.md).
 
 **Repo:** [github.com/TheAbsentTourist/weather-web](https://github.com/TheAbsentTourist/weather-web) · **Author:** [TheAbsentTourist](https://github.com/TheAbsentTourist) · chucktastictime@gmail.com
 
@@ -288,4 +288,4 @@ Issues: https://github.com/TheAbsentTourist/weather-web/issues
 
 Community project — best-effort support, no SLA. Do not paste API keys or Steam/FIRMS secrets into issues.
 
-More detail: [TERMS.md](TERMS.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.10.md](CHANGELOG-0.1.10.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).
+More detail: [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [SECURITY.md](SECURITY.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.11.md](CHANGELOG-0.1.11.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).

@@ -1,6 +1,6 @@
 {
   "name": "weather-web",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": false,
   "type": "module",
   "description": "Agent Plugin: weather and disaster hazard MCP tools (NWS, USGS, NHC, JTWC, SWPC, MeteoAlarm, FIRMS; optional EONET/GDACS/GVP/Open-Meteo).",
@@ -9,7 +9,8 @@
   },
   "author": {
     "name": "TheAbsentTourist",
-    "email": "chucktastictime@gmail.com"
+    "email": "chucktastictime@gmail.com",
+    "url": "https://github.com/TheAbsentTourist"
   },
   "license": "MIT",
   "scripts": {
@@ -21,5 +22,9 @@
     "type": "git",
     "url": "https://github.com/TheAbsentTourist/weather-web.git"
   },
-  "homepage": "https://github.com/TheAbsentTourist/weather-web"
+  "homepage": "https://github.com/TheAbsentTourist/weather-web#readme",
+  "bugs": {
+    "url": "https://github.com/TheAbsentTourist/weather-web/issues",
+    "email": "chucktastictime@gmail.com"
+  }
 }
