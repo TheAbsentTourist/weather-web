@@ -57,27 +57,39 @@ On Windows PowerShell, that is:
 git clone https://github.com/TheAbsentTourist/weather-web.git $env:USERPROFILE\.cursor\plugins\local\weather-web
 ```
 
-3. Confirm `server.mjs` exists in that folder.
-4. Reload Cursor: Command Palette → **Developer: Reload Window**.
-5. Check Customize / Plugins for **weather-web**.
+3. Reload Cursor: Command Palette → **Developer: Reload Window**.
+4. Check Customize / Plugins for **weather-web**.
 
 Teams/Enterprise: local plugins may be blocked until an admin allows them.
 
-The plugin’s own `mcp.json` is portable on purpose:
+The plugin’s `mcp.json` starts the server with npx. There is no local path and no `cwd`. Any host that can run `npx` uses this block as written, including the Grok Bot Directory:
 
 ```json
 {
-  "command": "node",
-  "args": ["./server.mjs"],
-  "cwd": "./"
+  "mcpServers": {
+    "weather-web": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:TheAbsentTourist/weather-web"],
+      "env": {
+        "FIRMS_MAP_KEY": "${FIRMS_MAP_KEY}",
+        "WEATHER_ENABLE_EONET": "${WEATHER_ENABLE_EONET}",
+        "WEATHER_ENABLE_GDACS": "${WEATHER_ENABLE_GDACS}",
+        "WEATHER_ENABLE_GVP": "${WEATHER_ENABLE_GVP}",
+        "WEATHER_ENABLE_OPEN_METEO": "${WEATHER_ENABLE_OPEN_METEO}"
+      }
+    }
+  }
 }
 ```
 
-That is the correct Agent Plugins shape. **We cannot ship your machine’s Node path in the repo.** Other MCP hosts that honor plugin-root cwd and a normal `PATH` can use that as-is.
+`npx -y github:TheAbsentTourist/weather-web` installs this package from GitHub and runs the `weather-web` bin (`server.mjs`). **We cannot ship your machine’s Node path in the repo.** If a host leaves a `${VAR}` placeholder unexpanded, or sets it to a blank string, the server treats that value as unset. Other hosts can paste the same server block into their MCP config without cloning.
 
 ---
 
-## Windows Cursor: it often will not start until you add a local workaround
+## Windows Cursor: npx, then a local workaround if spawn fails
+
+The shipped config above uses `npx`, so Cursor does not have to resolve `./server.mjs` from the plugin folder. If the MCP process cannot find `npx` on PATH (`spawn npx ENOENT`), use the absolute-path workaround below on that machine only. Do not commit those paths.
 
 ### Why (this is a Cursor bug, not a missing file in the plugin)
 
@@ -89,7 +101,7 @@ On Windows, Cursor’s **plugin** MCP launcher currently:
 
 We tried plugin-relative `cwd`, wrappers, and placeholders. None of those work until Cursor starts plugin MCP with **plugin root as cwd**, **system PATH** (or a documented way to resolve `node`), and **placeholder expansion** for `${PLUGIN_ROOT}`. Until then, each Windows Cursor user (or their agent) must point MCP at **this machine’s** `node.exe` and **this install’s** `server.mjs`.
 
-macOS/Linux: try the portable config first. If it fails the same way, use the same idea (full path to `node` + full path to `server.mjs`).
+macOS/Linux: the shipped `npx` config is the one to use. If spawn fails the same way, use the same idea (full path to `node` + full path to `server.mjs`).
 
 ### How to tell it failed
 
@@ -188,7 +200,7 @@ If you are an AI assistant installing this for a user:
 
 1. Clone or extract to `%USERPROFILE%\.cursor\plugins\local\weather-web` (Windows) or `~/.cursor/plugins/local/weather-web` (macOS/Linux). Folder name must be `weather-web`.
 2. Verify `server.mjs` exists. Run `node --check server.mjs` if Node is on PATH.
-3. On Windows Cursor, do **not** assume the shipped plugin `mcp.json` will work. Resolve `node.exe` and `server.mjs` with real filesystem paths, then merge `weather-web` into `~/.cursor/mcp.json` as in **Fix** above. If logs still use identifier `plugin-weather-web-weather-web`, apply the same absolute paths in the plugin’s `mcp.json`.
+3. On Windows Cursor, if MCP logs show `spawn npx ENOENT`, resolve `node.exe` and `server.mjs` with real filesystem paths, then merge `weather-web` into `~/.cursor/mcp.json` as in **Fix** above. If logs still use identifier `plugin-weather-web-weather-web`, apply the same absolute paths in the plugin’s `mcp.json`.
 4. Never write another user’s paths into the git repo. Never invent `FIRMS_MAP_KEY`.
 5. Tell the user to reload Cursor and to set FIRMS / optional flags only if they need those tools.
 
@@ -288,4 +300,4 @@ Issues: https://github.com/TheAbsentTourist/weather-web/issues
 
 Community project — best-effort support, no SLA. Do not paste API keys or Steam/FIRMS secrets into issues.
 
-More detail: [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [SECURITY.md](SECURITY.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.12.md](CHANGELOG-0.1.12.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).
+More detail: [TERMS.md](TERMS.md), [PRIVACY.md](PRIVACY.md), [SECURITY.md](SECURITY.md), [RATIONALE.md](RATIONALE.md), [VERIFY.md](VERIFY.md), [CHANGELOG-0.1.13.md](CHANGELOG-0.1.13.md), [docs/cursor-windows-mcp-spawn.md](docs/cursor-windows-mcp-spawn.md).

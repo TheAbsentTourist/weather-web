@@ -1,6 +1,6 @@
 {
   "name": "weather-web",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "private": false,
   "type": "module",
   "description": "Agent Plugin: weather and disaster hazard MCP tools (NWS, USGS, NHC, JTWC, SWPC, MeteoAlarm, FIRMS; optional EONET/GDACS/GVP/Open-Meteo).",
@@ -13,6 +13,16 @@
     "url": "https://github.com/TheAbsentTourist"
   },
   "license": "MIT",
+  "bin": {
+    "weather-web": "server.mjs"
+  },
+  "files": [
+    "server.mjs",
+    "skills",
+    "assets",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "smoke": "node ./scripts/smoke.mjs",
     "check": "node --check ./server.mjs",

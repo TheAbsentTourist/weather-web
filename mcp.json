@@ -3,9 +3,8 @@
   "mcpServers": {
     "weather-web": {
       "type": "stdio",
-      "command": "node",
-      "args": ["./server.mjs"],
-      "cwd": "./",
+      "command": "npx",
+      "args": ["-y", "github:TheAbsentTourist/weather-web"],
       "env": {
         "FIRMS_MAP_KEY": "${FIRMS_MAP_KEY}",
         "WEATHER_ENABLE_EONET": "${WEATHER_ENABLE_EONET}",

@@ -3,10 +3,10 @@
  * Offline mcp.json spawn-shape checks. No live weather fetches.
  *
  * Public mcp.json must stay portable:
- *   command node | cmd.exe
- *   args without machine-absolute paths (C:\Users, Program Files)
- *   no ${PLUGIN_ROOT} in command
- *   if command is node and args are ["./server.mjs"], cwd must be "./"
+ *   command npx (uvx, bunx, docker, node, or cmd.exe also accepted as portable)
+ *   args without machine-absolute paths, local relative paths, or blanks
+ *   no ${PLUGIN_ROOT}
+ *   no cwd — npx does not launch from the plugin folder
  *
  * Cursor Windows plugin spawn bugs (cwd = home, unexpanded ${PLUGIN_ROOT},
  * cwd: "${PLUGIN_ROOT}" ENOENT) are documented in
@@ -26,11 +26,14 @@ const server = mcp.mcpServers?.["weather-web"];
 assert.ok(server, "weather-web server missing from mcp.json");
 assert.equal(server.type, "stdio");
 
-const portableCommands = new Set(["node", "cmd.exe"]);
+const portableCommands = new Set(["npx", "uvx", "bunx", "docker", "node", "cmd.exe"]);
 assert.ok(
   portableCommands.has(server.command),
-  `command must be portable (node or cmd.exe), got ${JSON.stringify(server.command)}`,
+  `command must be portable (npx, uvx, bunx, docker, node, or cmd.exe), got ${JSON.stringify(server.command)}`,
 );
+assert.equal(server.command, "npx");
+assert.deepEqual(server.args, ["-y", "github:TheAbsentTourist/weather-web"]);
+assert.equal(server.cwd, undefined, "shipped mcp.json must not set cwd");
 assert.doesNotMatch(String(server.command), /\$\{PLUGIN_ROOT\}/);
 assert.doesNotMatch(String(server.command), /C:\\Users|Program Files/i);
 assert.notEqual(server.command, "./scripts/run-mcp.cmd");
@@ -43,6 +46,8 @@ for (const arg of args) {
   assert.doesNotMatch(text, /C:\\Users/i, "args must not contain C:\\Users (user mcp.json only)");
   assert.doesNotMatch(text, /Program Files/i, "args must not contain Program Files");
   assert.doesNotMatch(text, /\$\{PLUGIN_ROOT\}/, "Cursor does not expand ${PLUGIN_ROOT} in args");
+  assert.notEqual(text.trim(), "", "args must not contain blanks");
+  assert.doesNotMatch(text, /^\.\.?[/\\]/, "args must not be local paths");
 }
 
 const usesPluginRootEnv = args.some((a) => String(a).includes("%PLUGIN_ROOT%"));

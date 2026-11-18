@@ -6,19 +6,19 @@
  * FIRMS always registered; missing FIRMS_MAP_KEY → clear config error (never invent a key).
  * Credentials: process.env, then $PLUGIN_DATA/config.json.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { stdin, stdout } from "node:process";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PROTOCOL_VERSION = "2024-11-05";
-const SERVER_INFO = { name: "weather-web", version: "0.1.12" };
+const SERVER_INFO = { name: "weather-web", version: "0.1.13" };
 const TIMEOUT_MS = 25_000;
-const UA = "WeatherWebPlugin/0.1.12 (contact: chucktastictime@gmail.com)";
+const UA = "WeatherWebPlugin/0.1.13 (contact: chucktastictime@gmail.com)";
 const NWS_UA = UA;
 /** CloudFront on metoc.navy.mil often 403s the generic plugin UA — JTWC fetches use a browser-like UA. */
 const JTWC_UA =
-  "Mozilla/5.0 (compatible; WeatherWebPlugin/0.1.12; +https://github.com/TheAbsentTourist/weather-web)";
+  "Mozilla/5.0 (compatible; WeatherWebPlugin/0.1.13; +https://github.com/TheAbsentTourist/weather-web)";
 const JTWC_RSS = "https://www.metoc.navy.mil/jtwc/rss/jtwc.rss";
 const JTWC_ABPW = "https://www.metoc.navy.mil/jtwc/products/abpwweb.txt";
 const JTWC_ABIO = "https://www.metoc.navy.mil/jtwc/products/abioweb.txt";
@@ -105,11 +105,23 @@ function loadFileConfig() {
   }
 }
 
+/**
+ * Blank and unexpanded plugin placeholders (`${FIRMS_MAP_KEY}`) are unset.
+ * A host that does not expand mcp.json `${VAR}` must not become a FIRMS key.
+ */
+function isUnsetSetting(value) {
+  if (value == null) return true;
+  const s = String(value).trim();
+  return s === "" || /^\$\{[^}]+\}$/.test(s);
+}
+
 /** Env wins; otherwise $PLUGIN_DATA/config.json. Never invent a MAP_KEY. */
 function cred(name) {
-  if (process.env[name]) return String(process.env[name]);
+  const fromEnv = process.env[name];
+  if (!isUnsetSetting(fromEnv)) return String(fromEnv);
   const fromFile = loadFileConfig()[name];
-  return fromFile ? String(fromFile) : "";
+  if (fromFile && !isUnsetSetting(fromFile)) return String(fromFile);
+  return "";
 }
 
 function envFlag(name) {
@@ -3283,7 +3295,13 @@ function pump() {
 
 function startedAsMain() {
   try {
-    return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+    if (!process.argv[1]) return false;
+    const argvUrl = pathToFileURL(process.argv[1]).href;
+    if (import.meta.url === argvUrl) return true;
+    // npx runs the bin through a symlink in its cache; compare real paths.
+    const argvReal = pathToFileURL(realpathSync(process.argv[1])).href;
+    const selfReal = pathToFileURL(realpathSync(fileURLToPath(import.meta.url))).href;
+    return argvReal === selfReal;
   } catch {
     return true;
   }

@@ -25,18 +25,18 @@ Plugin-relative `./` as `command` is also resolved against the Cursor install di
 
 ## What this repo ships
 
-Public `mcp.json` stays portable:
+Public `mcp.json` is a portable npx setup (no local paths, no `cwd`):
 
-- `command`: `node`
-- `args`: `["./server.mjs"]`
-- `cwd`: `"./"` — Agent Plugins intent is that `./` is plugin-relative, so `server.mjs` is not loaded from the home folder
+- `command`: `npx`
+- `args`: `["-y", "github:TheAbsentTourist/weather-web"]`
+- The `weather-web` bin is `server.mjs` (`#!/usr/bin/env node`)
 
-No `${PLUGIN_ROOT}` in `command` or `args`. No `"cwd": "${PLUGIN_ROOT}"`. No `./scripts/run-mcp.cmd` as `command`. No `C:\Program Files\nodejs\node.exe` or `%USERPROFILE%` paths.
+No `${PLUGIN_ROOT}` in `command` or `args`. No `"cwd"`. No `./server.mjs`. No `./scripts/run-mcp.cmd` as `command`. No `C:\Program Files\nodejs\node.exe` or `%USERPROFILE%` paths.
 
-If a future host actually injects a child-env `PLUGIN_ROOT`, a `cmd.exe` line using `%PLUGIN_ROOT%\server.mjs` could be considered. Until that is proven, do not add a Windows launcher.
+`npx` installs the package from GitHub and runs the bin, so the server does not need the plugin folder as its working directory. Blank and unexpanded `${VAR}` env values are treated as unset.
 
 ## Known-good escape hatch
 
 User file `%USERPROFILE%\.cursor\mcp.json` with full paths to `node.exe` and the **installed** plugin `server.mjs`. See the README Windows section. Placeholders only (`YOUR_USERNAME`); never commit real machine paths.
 
-This is a **Cursor host** defect (cwd + placeholder expansion), not a weather-web runtime bug. Grok Bot and other hosts that run `node ./server.mjs` from the plugin directory are unchanged.
+This is a **Cursor host** defect (cwd + placeholder expansion), not a weather-web runtime bug. Grok Bot Directory and other hosts run the shipped `npx` command as written.
